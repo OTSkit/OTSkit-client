@@ -1,3 +1,7 @@
+<p align="center">
+  <img src=".github/otskit-client-header.png" alt="OTSkit Client" width="480" />
+</p>
+
 # @otskit/client
 
 > TypeScript/JavaScript client for OpenTimestamps with enterprise-grade resilience patterns
