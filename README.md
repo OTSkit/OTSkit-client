@@ -1,8 +1,8 @@
-# OpenTimestamps Client SDK
+# OTSkit Client
 
-> Official TypeScript/JavaScript client for OpenTimestamps with enterprise-grade resilience patterns
+> TypeScript/JavaScript client for OpenTimestamps with enterprise-grade resilience patterns
 
-[![npm version](https://img.shields.io/npm/v/@alexalves87/opentimestamps-client.svg)](https://www.npmjs.com/package/@alexalves87/opentimestamps-client)
+[![npm version](https://img.shields.io/npm/v/@otskit/client.svg)](https://www.npmjs.com/package/@otskit/client)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
@@ -30,13 +30,13 @@
 ## Installation
 
 ```bash
-npm install @alexalves87/opentimestamps-client
+npm install @otskit/client
 ```
 
 ## Quick Start
 
 ```typescript
-import { OpenTimestampsClient } from '@alexalves87/opentimestamps-client'
+import { OpenTimestampsClient } from '@otskit/client'
 import { createHash } from 'crypto'
 import { readFileSync, writeFileSync } from 'fs'
 
@@ -79,8 +79,6 @@ const client = new OpenTimestampsClient({
 
 ## Architecture
 
-
-
 Key design decisions:
 - Per-calendar circuit breakers: one failing calendar does not affect others
 - Threshold-based submissions: stamp() requires N/M calendars to succeed (default 2/4)
@@ -112,9 +110,9 @@ npm run build
 ## Links
 
 - [OpenTimestamps Protocol](https://opentimestamps.org)
-- [npm Package](https://www.npmjs.com/package/@alexalves87/opentimestamps-client)
-- [Issue Tracker](https://github.com/AlexAlves87/opentimestamps-client/issues)
+- [npm Package](https://www.npmjs.com/package/@otskit/client)
+- [Issue Tracker](https://github.com/OTSkit/OTSkit-client/issues)
 
 ## License
 
-MIT - alexalves87
+MIT
