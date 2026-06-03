@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../mocks/server.js'
-import { DetachedTimestampFile } from '@alexalves87/opentimestamps'
+import { DetachedTimestampFile } from '@otskit/core'
 import { OpenTimestampsClient } from '../../src/client.js'
 import { StampError, ValidationError } from '../../src/errors.js'
 

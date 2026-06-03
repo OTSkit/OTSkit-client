@@ -170,7 +170,7 @@ describe('executeRequest — ramas de error', () => {
 })
 
 // ─── src/network/circuit-breaker.ts — ramas de logger ────────────────────────
-import { CircuitBreaker, CircuitState } from '../../src/network/circuit-breaker.js'
+import { CircuitBreaker } from '../../src/network/circuit-breaker.js'
 
 describe('CircuitBreaker — ramas de logger', () => {
   const makeLogger = () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() })
@@ -328,7 +328,7 @@ describe('orchestrateStamp — ramas de validación directa', () => {
 
 
 // ─── orchestration.ts — ramas de logger en verify ────────────────────────────
-import { FAKE_COMPLETE_OTS, FAKE_INCOMPLETE_OTS, BITCOIN_HEIGHT } from '../mocks/handlers.js'
+import { FAKE_COMPLETE_OTS } from '../mocks/handlers.js'
 
 describe('orchestrateVerify — ramas de logger', () => {
   it('logger?.info en verificación exitosa', async () => {
@@ -355,7 +355,7 @@ describe('orchestrateVerify — ramas de logger', () => {
 
 // ─── orchestration.ts — rama logger?.warn en upgrade (whitelist) ─────────────
 import { orchestrateUpgrade } from '../../src/core/orchestration.js'
-import { DetachedTimestampFile, OpSHA256, makePending } from '@alexalves87/opentimestamps'
+import { DetachedTimestampFile, OpSHA256, makePending } from '@otskit/core'
 
 describe('orchestrateUpgrade — logger?.warn con calendario no whitelisted', () => {
   it('cubre la rama logger?.warn cuando se ignora un calendario', async () => {
@@ -511,8 +511,8 @@ describe('orchestrateUpgrade — ramas adicionales', () => {
   })
 
   it('att.kind !== pending → continue (cubre rama unknown attestation)', async () => {
-    const { makeUnknown } = await import('@alexalves87/opentimestamps')
-    const leaf = new (await import('@alexalves87/opentimestamps')).Timestamp(new Uint8Array(32).fill(0x33))
+    const { makeUnknown } = await import('@otskit/core')
+    const _leaf = new (await import('@otskit/core')).Timestamp(new Uint8Array(32).fill(0x33))
     // timestamp con unknown + pending: unknown se salta, pending se consulta
     const dtf2 = DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(32).fill(0x33))
     const sub = dtf2.timestamp.add(new OpSHA256())

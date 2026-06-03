@@ -1,4 +1,4 @@
-import { serializeOTS } from '@alexalves87/opentimestamps'
+import { serializeOTS } from '@otskit/core'
 import { writeFileSync } from 'fs'
 
 const TEST_HASH = new Uint8Array(32).fill(0xaa)

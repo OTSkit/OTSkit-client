@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { OpenTimestampsClient } from '../../src/client.js'
 import { server } from '../mocks/server.js'
 import { http, HttpResponse, delay } from 'msw'
-import { Timestamp, StreamSerializationContext, makePending } from '@alexalves87/opentimestamps'
+import { Timestamp, StreamSerializationContext, makePending } from '@otskit/core'
 
 /** Respuesta OTS canónica mínima para un digest arbitrario. */
 function pendingOtsResponse(body: ArrayBuffer): ArrayBuffer {

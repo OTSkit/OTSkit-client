@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { DetachedTimestampFile } from '@alexalves87/opentimestamps'
+import { DetachedTimestampFile } from '@otskit/core'
 import {
   FAKE_INCOMPLETE_OTS,
   FAKE_COMPLETE_OTS,

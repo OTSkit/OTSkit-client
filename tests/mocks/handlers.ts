@@ -11,7 +11,7 @@ import {
   makeBitcoin,
   bytesToHex,
   StreamSerializationContext,
-} from '@alexalves87/opentimestamps'
+} from '@otskit/core'
 
 const CALENDAR_URLS = [
   'https://alice.btc.calendar.opentimestamps.org',

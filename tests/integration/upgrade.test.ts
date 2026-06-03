@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { server } from '../mocks/server.js'
 import { OpenTimestampsClient } from '../../src/client.js'
 import { UpgradeError, ValidationError } from '../../src/errors.js'
-import { DetachedTimestampFile, OpSHA256, makePending } from '@alexalves87/opentimestamps'
+import { DetachedTimestampFile, OpSHA256, makePending } from '@otskit/core'
 import {
   FAKE_INCOMPLETE_OTS,
   FAKE_COMPLETE_OTS,

@@ -111,7 +111,7 @@ describe('EsploraClient.block', () => {
 })
 
 import { verifyTimestampAttestation } from '../../src/network/esplora.js'
-import { makeBitcoin, makeLitecoin, makePending } from '@alexalves87/opentimestamps'
+import { makeBitcoin, makeLitecoin, makePending } from '@otskit/core'
 
 describe('verifyTimestampAttestation', () => {
   const wireBlock = (baseUrl: string, hash: string, merkleroot: string, time: number) => {

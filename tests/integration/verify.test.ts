@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../mocks/server.js'
 import { OpenTimestampsClient } from '../../src/client.js'
-import { DetachedTimestampFile, OpSHA256, OpAppend, makeBitcoin, bytesToHex } from '@alexalves87/opentimestamps'
+import { DetachedTimestampFile, OpSHA256, OpAppend, makeBitcoin, bytesToHex } from '@otskit/core'
 import { FAKE_COMPLETE_OTS, FAKE_INCOMPLETE_OTS, BITCOIN_HEIGHT, BLOCK_TIME } from '../mocks/handlers.js'
 
 describe('verify() - Integration', () => {
@@ -75,7 +75,7 @@ describe('verify() - Integration', () => {
   })
 
   it('attestation litecoin → no soportado por este cliente', async () => {
-    const { makeLitecoin } = await import('@alexalves87/opentimestamps')
+    const { makeLitecoin } = await import('@otskit/core')
     const dtf = DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(32).fill(0xdd))
     const leaf = dtf.timestamp.add(new OpSHA256())
     leaf.attestations.push(makeLitecoin(800000))

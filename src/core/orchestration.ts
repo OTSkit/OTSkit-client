@@ -3,7 +3,6 @@
  * el CalendarClient (protocolo OTS real) y el EsploraClient. Fail-closed en todo.
  */
 import {
-  Timestamp,
   DetachedTimestampFile,
   OpSHA256,
   OpAppend,
