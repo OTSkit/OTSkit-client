@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, develop]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test:
     name: Test on Node.js ${{ matrix.node-version }}
@@ -17,13 +20,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
-      - name: Clone otskit-core (file: dependency)
+      - name: "Clone otskit-core (file: dependency)"
         run: git clone https://github.com/OTSkit/OTSkit-core.git ../otskit-core
 
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -41,7 +44,7 @@ jobs:
         if: matrix.node-version == '20.x'
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v4
         if: matrix.node-version == '20.x'
         with:
           file: ./coverage/coverage-final.json
@@ -55,13 +58,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
-      - name: Clone otskit-core (file: dependency)
+      - name: "Clone otskit-core (file: dependency)"
         run: git clone https://github.com/OTSkit/OTSkit-core.git ../otskit-core
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: '20.x'
 
