@@ -1,0 +1,77 @@
+{
+  "name": "@otskit/client",
+  "version": "0.0.0-development",
+  "description": "Official client SDK for OpenTimestamps calendars with resilience patterns",
+  "author": "alexalves87",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "semantic-release": "semantic-release"
+  },
+  "keywords": [
+    "opentimestamps",
+    "ots",
+    "blockchain",
+    "bitcoin",
+    "timestamp",
+    "proof",
+    "client",
+    "sdk"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexalves87/opentimestamps-client.git"
+  },
+  "dependencies": {
+    "@otskit/core": "file:../otskit-core"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@types/node": "^22.8.7",
+    "@vitest/browser": "^2.1.9",
+    "@vitest/coverage-v8": "^2.1.9",
+    "@eslint/js": "^9.14.0",
+    "eslint": "^9.14.0",
+    "typescript-eslint": "^8.0.0",
+    "fast-check": "^4.3.0",
+    "msw": "^2.11.6",
+    "playwright": "^1.56.1",
+    "prettier": "^3.3.3",
+    "semantic-release": "^24.2.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}

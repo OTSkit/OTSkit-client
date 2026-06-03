@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "id": "hello-world",
+      "group": "confirmed",
+      "original_file": "hello-world.txt",
+      "original_sha256": "03ba204e50d126e4674c005e04d82e84c21366780af1f43bd54a37816b6ab340",
+      "ots_file": "hello-world.txt.ots",
+      "ots_sha256": "be61ecb940db2e4a6f89fbed59c8d4f7f74fa756cbc1fad1ad7aabcb2bf59c30",
+      "algorithm": "sha256",
+      "expected_valid": true,
+      "expected_block_height": 358391,
+      "expected_timestamp": 1432827678,
+      "expected_merkleroot": "8a1b66ecb7cbd07d8139a7e7d7f2c41aab1f5009b8364aaf61d03ad245e47e00",
+      "producer": "python-opentimestamps-client",
+      "producer_version": "0.7.0",
+      "source_url": "https://github.com/opentimestamps/opentimestamps-client",
+      "source_commit": "5d5d325b2a7083e93a7c685a679edc3f6b8f27d7",
+      "source_path": "examples/hello-world.txt.ots",
+      "acquired_at": "2026-06-03",
+      "notes": "Vector de referencia principal del ecosistema OTS"
+    }
+  ]
+}
