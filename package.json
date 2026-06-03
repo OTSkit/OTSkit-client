@@ -1,6 +1,6 @@
 {
   "name": "@otskit/client",
-  "version": "0.0.0-development",
+  "version": "1.0.0",
   "description": "Official client SDK for OpenTimestamps calendars with resilience patterns",
   "author": "alexalves87",
   "license": "MIT",
@@ -51,7 +51,7 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/alexalves87/opentimestamps-client.git"
+    "url": "https://github.com/OTSkit/OTSkit-client.git"
   },
   "dependencies": {
     "@otskit/core": "file:../otskit-core"
