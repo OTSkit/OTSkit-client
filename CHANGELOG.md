@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/OTSkit/OTSkit-client/compare/v1.0.0...v1.0.1) (2026-06-03)
+
+
+### Bug Fixes
+
+* move @otskit/core to devDependencies (bundled in dist) ([1f10ee8](https://github.com/OTSkit/OTSkit-client/commit/1f10ee8ab637385192d2a66fe4c08f8d96031ca3))
+
 # 1.0.0 (2026-06-03)
 
 
