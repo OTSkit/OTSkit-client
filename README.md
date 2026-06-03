@@ -1,37 +1,47 @@
-# OTSkit Client
+# @otskit/client
 
 > TypeScript/JavaScript client for OpenTimestamps with enterprise-grade resilience patterns
 
+[![CI](https://github.com/OTSkit/OTSkit-client/actions/workflows/ci.yml/badge.svg)](https://github.com/OTSkit/OTSkit-client/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@otskit/client.svg)](https://www.npmjs.com/package/@otskit/client)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
 
+`@otskit/client` is the official client SDK for submitting, upgrading, and verifying [OpenTimestamps](https://opentimestamps.org) proofs. It sits on top of [@otskit/core](https://github.com/OTSkit/OTSkit-core) — the low-level protocol engine — and wraps it in a high-level API with production-ready resilience patterns built in.
+
 ## Features
 
-**Complete OpenTimestamps Operations**
-- `stamp()` - Create timestamp proofs by submitting to calendar servers
-- `upgrade()` - Query calendars for Bitcoin confirmations
-- `verify()` - Verify proofs against the Bitcoin blockchain
+### Complete OpenTimestamps Workflow
+- **`stamp()`** — Hash your data, build a Merkle tree with a secure nonce, and submit to multiple calendar servers simultaneously
+- **`upgrade()`** — Query calendars for Bitcoin confirmations and merge them into the pending proof
+- **`verify()`** — Verify a completed proof against the Bitcoin blockchain via Esplora
 
-**Enterprise-Grade Resilience**
-- **Circuit Breaker** - Isolate failures per calendar (prevents cascading failures)
-- **Exponential Backoff** - Configurable retry strategies with jitter
-- **Timeout Management** - Per-attempt and total operation timeouts
-- **Threshold-based Submissions** - Require minimum successful submissions (default: 2/4 calendars)
+### Enterprise-Grade Resilience
+- **Circuit Breaker** — Per-calendar isolation; one failing calendar never affects the others
+- **Exponential Backoff** — Three strategies (`exponential`, `linear`, `constant`) with three jitter modes (`full`, `equal`, `none`)
+- **Dual Timeouts** — Independent `totalTimeoutMs` (whole operation) and `connectTimeoutMs` (per attempt)
+- **Threshold Submissions** — `stamp()` requires N-of-M successful submissions (default 2-of-4); configurable
+- **Fail-Fast on 4xx** — Client errors are never retried; only 5xx and network failures trigger retries
 
-**Developer Experience**
-- **TypeScript First** - Full type safety with strict mode enabled
-- **Multi-Runtime** - Works in Node.js 18+, browsers, and edge runtimes
-- **Tree-Shakeable** - Dual ESM/CJS build with zero dependencies
-- **Abort Support** - Native AbortController integration for all operations
-- **Observable** - Optional logger interface for monitoring and debugging
+### Developer Experience
+- **TypeScript-first** — Strict types throughout; full IntelliSense for every option and error
+- **Multi-runtime** — Node.js 18+, browsers, and edge runtimes (uses the standard `fetch` API)
+- **Tree-shakeable** — Dual ESM/CJS build, zero runtime dependencies
+- **`AbortController` support** — Cancel any in-flight operation at any level
+- **Observable** — Drop-in `Logger` interface compatible with `console`, `pino`, `winston`, etc.
+
+---
 
 ## Installation
 
 ```bash
 npm install @otskit/client
 ```
+
+`@otskit/core` is a peer dependency bundled as a `file:` reference in monorepo setups; no separate install is needed.
+
+---
 
 ## Quick Start
 
@@ -42,74 +52,473 @@ import { readFileSync, writeFileSync } from 'fs'
 
 const client = new OpenTimestampsClient()
 
-const fileContent = readFileSync('document.pdf')
-const hash = createHash('sha256').update(fileContent).digest()
+// 1. Hash the file you want to timestamp
+const fileBytes = readFileSync('contract.pdf')
+const hash = createHash('sha256').update(fileBytes).digest()
 
-// Create timestamp
-const otsProof = await client.stamp(hash)
-writeFileSync('document.pdf.ots', otsProof)
+// 2. Submit to calendars → get a pending .ots proof
+const pendingProof = await client.stamp(hash)
+writeFileSync('contract.pdf.ots', pendingProof)
+console.log('Proof saved — Bitcoin confirmation usually arrives in 10–60 minutes.')
 
-// Upgrade to Bitcoin confirmation
-const upgradedProof = await client.upgrade(otsProof)
+// 3. Later: query calendars for a Bitcoin confirmation
+const upgradedProof = await client.upgrade(pendingProof)
+writeFileSync('contract.pdf.ots', upgradedProof)
 
-// Verify
+// 4. Verify the completed proof
 const result = await client.verify(upgradedProof, hash)
-console.log('Verified in block', result.blockHeight)
+if (result.valid) {
+  console.log(`Timestamp confirmed in Bitcoin block ${result.blockHeight}`)
+  console.log(`Block time: ${new Date(result.timestamp! * 1000).toISOString()}`)
+} else {
+  console.error(`Verification failed: ${result.error}`)
+}
 ```
 
-## Resilience Configuration
+---
+
+## Usage
+
+### Stamping data
+
+`stamp()` accepts either a 32-byte `Buffer` or a 64-character hex string:
 
 ```typescript
-const client = new OpenTimestampsClient({
-  resilience: {
-    timeout: { totalMs: 30000, perAttemptMs: 5000 },
-    retries: {
-      enabled: true,
-      maxAttempts: 3,
-      backoff: { strategy: 'exponential', initialDelayMs: 1000, jitter: 'full' },
-    },
-    circuitBreaker: {
-      enabled: true,
-      failureThreshold: 5,
-      recoveryTimeoutMs: 15000,
-    },
-  },
-})
+import { createHash } from 'crypto'
+
+// From a Buffer
+const hashBuffer = createHash('sha256').update(fileBytes).digest()
+const proof = await client.stamp(hashBuffer)
+
+// From a hex string
+const hashHex = createHash('sha256').update(fileBytes).digest('hex')
+const proof = await client.stamp(hashHex)
 ```
 
-## Architecture
+Internally, `stamp()` prepends a 16-byte cryptographic nonce to each submission, builds a Merkle tree over all concurrent submissions, and serializes the result as a standard `.ots` file.
 
-Key design decisions:
-- Per-calendar circuit breakers: one failing calendar does not affect others
-- Threshold-based submissions: stamp() requires N/M calendars to succeed (default 2/4)
-- Sequential upgrade queries: stops at first confirmed calendar
-- 4xx = fail fast, 5xx = retry
+### Upgrading a pending proof
 
-## Error Handling
+Call `upgrade()` periodically until Bitcoin confirms the timestamp. It queries only the calendars embedded in the proof (validated against a whitelist), so your `calendars` option does not affect this step.
 
 ```typescript
+import { UpgradeError } from '@otskit/client'
+
 try {
-  await client.stamp(hash)
-} catch (error) {
-  if (error instanceof StampError) {
-    console.log(error.successfulSubmissions.length, 'calendars succeeded')
-    console.log(error.failedSubmissions.length, 'calendars failed')
+  const upgradedProof = await client.upgrade(pendingProof)
+  // Save and stop polling
+} catch (err) {
+  if (err instanceof UpgradeError) {
+    // No calendar has a Bitcoin confirmation yet — try again later
+    console.log('Not confirmed yet, retry in 5 minutes')
   }
 }
 ```
 
-## Testing
+### Verifying a proof
 
-83+ tests (unit + integration), MSW-based mocks, property-based testing with fast-check.
+`verify()` queries the Blockstream Esplora API to check the Bitcoin merkle root. Passing `originalDataHash` adds an extra integrity check that the proof was created for that specific hash.
+
+```typescript
+const result = await client.verify(proof, originalHash)
+
+if (result.valid) {
+  console.log(result.blockHeight)  // Bitcoin block number
+  console.log(result.blockHash)    // Block hash (hex)
+  console.log(result.timestamp)    // Unix timestamp of the block
+} else {
+  console.log(result.error)        // Human-readable reason
+}
+```
+
+`verify()` always returns `VerificationResult` — it never throws for invalid proofs, only for unexpected network failures.
+
+### Error handling
+
+```typescript
+import {
+  StampError,
+  UpgradeError,
+  ValidationError,
+  NetworkError,
+  CircuitBreakerError,
+} from '@otskit/client'
+
+try {
+  await client.stamp(hash)
+} catch (err) {
+  if (err instanceof ValidationError) {
+    // Invalid hash format
+  } else if (err instanceof StampError) {
+    // Not enough calendars accepted the submission
+    console.log(`Succeeded: ${err.successfulSubmissions.map(s => s.calendar)}`)
+    console.log(`Failed:    ${err.failedSubmissions.map(s => s.calendar)}`)
+  } else if (err instanceof CircuitBreakerError) {
+    // A calendar is isolated due to repeated failures
+  } else if (err instanceof NetworkError) {
+    console.log(`HTTP status: ${err.status}`) // undefined for non-HTTP errors
+  }
+}
+```
+
+### Cancellation with AbortController
+
+You can cancel individual operations or set a client-wide signal:
+
+```typescript
+// Per-operation cancellation
+const controller = new AbortController()
+setTimeout(() => controller.abort(), 10_000)
+
+const proof = await client.stamp(hash, { signal: controller.signal })
+
+// Client-wide cancellation (applies to all operations)
+const clientController = new AbortController()
+const client = new OpenTimestampsClient({ signal: clientController.signal })
+
+clientController.abort() // cancels any in-flight request
+```
+
+### Observability with a logger
+
+Any object with `debug`, `info`, `warn`, and `error` methods works:
+
+```typescript
+import pino from 'pino'
+
+const client = new OpenTimestampsClient({
+  logger: pino({ level: 'debug' }),
+})
+```
+
+Using `console` directly:
+
+```typescript
+const client = new OpenTimestampsClient({ logger: console })
+```
+
+### Monitoring circuit breakers
+
+```typescript
+const state = client.getCircuitState('https://alice.btc.calendar.opentimestamps.org')
+// 'CLOSED' | 'OPEN' | 'HALF_OPEN' | undefined
+
+// Manually recover a calendar after a known incident
+client.resetCircuit('https://alice.btc.calendar.opentimestamps.org')
+
+// Reset all calendars at once
+client.resetAllCircuits()
+```
+
+---
+
+## Configuration
+
+### `ClientOptions`
+
+```typescript
+const client = new OpenTimestampsClient({
+  // Calendar servers to submit to (default: the four public OTS calendars)
+  calendars: [
+    'https://alice.btc.calendar.opentimestamps.org',
+    'https://bob.btc.calendar.opentimestamps.org',
+    'https://finney.calendar.eternitywall.com',
+    'https://btc.calendar.catallaxy.com',
+  ],
+
+  // How many calendars must succeed for stamp() to resolve (default: 2)
+  minimumSuccessfulSubmissions: 2,
+
+  // Resilience configuration (see below)
+  resilience: { ... },
+
+  // Logger implementing { debug, info, warn, error }
+  logger: console,
+
+  // AbortSignal applied to all operations on this client
+  signal: controller.signal,
+})
+```
+
+### `ResilienceOptions`
+
+All fields are optional — unspecified fields fall back to the defaults shown.
+
+```typescript
+resilience: {
+  // Maximum total time for a single operation across all retries (ms)
+  totalTimeoutMs: 30_000,   // default
+
+  // Maximum time for a single HTTP attempt (ms)
+  connectTimeoutMs: 5_000,  // default
+
+  retries: {
+    enabled: true,          // default
+    maxAttempts: 3,         // default
+
+    backoff: {
+      strategy: 'exponential', // 'exponential' | 'linear' | 'constant'
+      initialDelayMs: 200,     // default
+      maxDelayMs: 5_000,       // default; caps the computed delay
+      jitter: 'full',          // 'full' | 'equal' | 'none'
+    },
+  },
+
+  circuitBreaker: {
+    enabled: true,            // default
+    failureThreshold: 5,      // consecutive failures before OPEN (default)
+    recoveryTimeoutMs: 15_000,// time in OPEN before trying HALF_OPEN (default)
+    halfOpenMaxAttempts: 1,   // probing requests in HALF_OPEN state (default)
+  },
+}
+```
+
+**Backoff strategies:**
+
+| Strategy | Delay formula |
+|---|---|
+| `exponential` | `initialDelayMs × 2^(attempt - 1)` |
+| `linear` | `initialDelayMs × attempt` |
+| `constant` | `initialDelayMs` |
+
+**Jitter modes:**
+
+| Mode | Effect |
+|---|---|
+| `full` | Random value in `[0, delay]` — best for thundering-herd prevention |
+| `equal` | Random value in `[delay/2, delay]` |
+| `none` | Deterministic delay |
+
+**Circuit breaker states:**
+
+```
+CLOSED ──(failureThreshold consecutive failures)──► OPEN
+OPEN   ──(recoveryTimeoutMs elapsed)             ──► HALF_OPEN
+HALF_OPEN ──(success)                            ──► CLOSED
+HALF_OPEN ──(failure)                            ──► OPEN
+```
+
+---
+
+## API Reference
+
+### `OpenTimestampsClient`
+
+#### Constructor
+
+```typescript
+new OpenTimestampsClient(options?: ClientOptions)
+```
+
+#### `stamp(hash, options?): Promise<Buffer>`
+
+Submits the hash to configured calendars and returns a serialized `.ots` proof.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `hash` | `Buffer \| string` | SHA-256 hash (32-byte Buffer or 64-char hex string) |
+| `options.signal` | `AbortSignal` | Override the client-level signal for this call |
+
+Throws `ValidationError` if the hash format is invalid.  
+Throws `StampError` if fewer than `minimumSuccessfulSubmissions` calendars accepted.
+
+#### `upgrade(proof, options?): Promise<Buffer>`
+
+Queries the calendars referenced in the proof for Bitcoin confirmations. Returns the updated proof if at least one calendar confirmed; otherwise throws `UpgradeError`.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `proof` | `Buffer` | Serialized `.ots` proof as returned by `stamp()` |
+| `options.signal` | `AbortSignal` | Override the client-level signal for this call |
+
+Throws `ValidationError` if the proof is malformed.  
+Throws `UpgradeError` if no calendar has confirmed the timestamp yet.
+
+#### `verify(proof, originalDataHash?): Promise<VerificationResult>`
+
+Verifies a completed proof against the Bitcoin blockchain via Esplora. Never throws for invalid or incomplete proofs — failures are returned as `{ valid: false, error: '...' }`.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `proof` | `Buffer` | Completed `.ots` proof with a Bitcoin attestation |
+| `originalDataHash` | `Buffer \| string \| undefined` | If provided, also checks that the proof was created for this hash |
+
+Returns `VerificationResult`:
+
+```typescript
+{
+  valid: boolean
+  blockHeight?: number   // Bitcoin block number
+  blockHash?: string     // Block hash (hex)
+  timestamp?: number     // Unix epoch of the block
+  error?: string         // Set when valid is false
+}
+```
+
+#### `getCircuitState(calendarUrl): CircuitState | undefined`
+
+Returns the current state of the circuit breaker for a calendar URL (`'CLOSED'`, `'OPEN'`, `'HALF_OPEN'`, or `undefined` if not yet initialized).
+
+#### `resetCircuit(calendarUrl): void`
+
+Manually resets the circuit breaker for a calendar. Use this after a known outage is resolved.
+
+#### `resetAllCircuits(): void`
+
+Resets all circuit breakers across all calendars.
+
+---
+
+### Errors
+
+All errors extend `OpenTimestampsClientError extends Error`.
+
+| Class | When |
+|---|---|
+| `ValidationError` | Invalid input (bad hash format, malformed proof, invalid URL) |
+| `StampError` | `stamp()` did not reach `minimumSuccessfulSubmissions`. Has `.successfulSubmissions` and `.failedSubmissions` arrays |
+| `UpgradeError` | No calendar confirmed the timestamp yet |
+| `NetworkError` | Network failure (timeout, all retries exhausted). Has `.status?: number` |
+| `CircuitBreakerError extends NetworkError` | Request rejected because the circuit is OPEN |
+| `CommitmentNotFoundError extends NetworkError` | Calendar returned 404 for a commitment |
+| `CalendarResponseTooLargeError extends NetworkError` | Calendar response exceeded the 10 KB size limit |
+| `EsploraResponseError extends NetworkError` | Esplora returned an invalid, malformed, or oversized response |
+
+---
+
+### Advanced exports
+
+These are available for custom integrations and advanced use cases.
+
+#### `CalendarClient`
+
+Low-level client for a single OTS calendar server.
+
+```typescript
+import { CalendarClient, ResilientNetworkLayer, DEFAULT_RESILIENCE } from '@otskit/client'
+
+const network = new ResilientNetworkLayer(DEFAULT_RESILIENCE)
+const calendar = new CalendarClient('https://alice.btc.calendar.opentimestamps.org', network)
+
+const timestamp = await calendar.submit(digest)       // POST /digest
+const upgraded  = await calendar.getTimestamp(digest) // GET /timestamp/:hex
+```
+
+#### `EsploraClient`
+
+Client for querying a Bitcoin block explorer compatible with the [Esplora API](https://github.com/Blockstream/esplora/blob/master/API.md).
+
+```typescript
+import { EsploraClient, ResilientNetworkLayer, DEFAULT_RESILIENCE, PUBLIC_ESPLORA_URL } from '@otskit/client'
+
+const network = new ResilientNetworkLayer(DEFAULT_RESILIENCE)
+const esplora = new EsploraClient(network, { url: PUBLIC_ESPLORA_URL })
+
+const blockHash   = await esplora.blockHash(850_000)         // → hex string
+const blockHeader = await esplora.block(blockHash)           // → { merkleroot, time }
+```
+
+#### `verifyTimestampAttestation`
+
+Verifies a single `Attestation` (Bitcoin or Litecoin) against a block explorer.
+
+```typescript
+import { verifyTimestampAttestation } from '@otskit/client'
+
+const blockTime = await verifyTimestampAttestation(digest, attestation, esploraClient)
+```
+
+#### `UrlWhitelist`
+
+Wildcard URL allowlist used internally to validate calendar URLs in upgrade proofs.
+
+```typescript
+import { UrlWhitelist } from '@otskit/client'
+
+const wl = new UrlWhitelist([
+  'https://*.calendar.opentimestamps.org',
+  'https://my-calendar.example.com',
+])
+
+wl.contains('https://alice.btc.calendar.opentimestamps.org') // true
+wl.contains('https://evil.example.com')                      // false
+```
+
+#### `ResilientNetworkLayer`
+
+The full timeout + retry + circuit-breaker stack as a standalone class.
+
+```typescript
+import { ResilientNetworkLayer, DEFAULT_RESILIENCE } from '@otskit/client'
+
+const network = new ResilientNetworkLayer(DEFAULT_RESILIENCE, logger)
+const response = await network.request(calendarUrl, {
+  url: 'https://...',
+  method: 'POST',
+  headers: { 'Content-Type': 'application/octet-stream' },
+  body: new Uint8Array([...]),
+})
+// response.data: Uint8Array, response.ok: boolean, response.status: number
+```
+
+#### Constants
+
+```typescript
+import {
+  DEFAULT_CALENDARS,           // string[] — the four public OTS calendars
+  DEFAULT_RESILIENCE,          // ResilienceOptions — default timeout/retry/cb config
+  DEFAULT_CALENDAR_WHITELIST,  // UrlWhitelist — trusted calendar domains for upgrade
+  DEFAULT_AGGREGATORS,         // string[] — OTS aggregator pool URLs
+  PUBLIC_ESPLORA_URL,          // 'https://blockstream.info/api'
+  MAX_CALENDAR_RESPONSE_SIZE,  // 10_000 (bytes)
+  MAX_ESPLORA_RESPONSE_SIZE,   // 100_000 (bytes)
+} from '@otskit/client'
+```
+
+---
+
+## Contributing
+
+Contributions are welcome. Please open an issue before starting significant work so we can align on approach.
+
+### Setup
 
 ```bash
-npm test
-npm run build
+git clone https://github.com/OTSkit/OTSkit-client.git
+cd OTSkit-client
+npm install
+npm test        # 160 unit + integration tests
+npm run lint    # ESLint
+npm run build   # tsup → dist/
 ```
+
+### Testing
+
+The test suite uses [Vitest](https://vitest.dev), [MSW](https://mswjs.io) for HTTP mocking, and [fast-check](https://fast-check.dev) for property-based testing. All tests run in Node.js (no browser required).
+
+```bash
+npm test                    # run all tests once
+npm run test:watch          # watch mode
+npm test -- --coverage      # with coverage report (100% threshold enforced)
+```
+
+### Commit convention
+
+This repository uses [Conventional Commits](https://www.conventionalcommits.org). Releases are automated via [semantic-release](https://semantic-release.gitbook.io).
+
+### Code style
+
+- TypeScript strict mode
+- ESLint + Prettier (run `npm run format` before pushing)
+- Fail-closed: all external input is validated at the boundary
+- No runtime dependencies
+
+---
 
 ## Links
 
 - [OpenTimestamps Protocol](https://opentimestamps.org)
+- [@otskit/core](https://github.com/OTSkit/OTSkit-core) — Protocol engine used by this SDK
 - [npm Package](https://www.npmjs.com/package/@otskit/client)
 - [Issue Tracker](https://github.com/OTSkit/OTSkit-client/issues)
 
