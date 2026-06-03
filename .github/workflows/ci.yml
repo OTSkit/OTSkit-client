@@ -19,6 +19,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Checkout otskit-core (file: dependency)
+        uses: actions/checkout@v6
+        with:
+          repository: OTSkit/OTSkit-core
+          path: ../otskit-core
+
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:
@@ -53,6 +59,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+
+      - name: Checkout otskit-core (file: dependency)
+        uses: actions/checkout@v6
+        with:
+          repository: OTSkit/OTSkit-core
+          path: ../otskit-core
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
