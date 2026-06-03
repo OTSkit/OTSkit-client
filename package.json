@@ -53,10 +53,9 @@
     "type": "git",
     "url": "https://github.com/OTSkit/OTSkit-client.git"
   },
-  "dependencies": {
-    "@otskit/core": "file:../otskit-core"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "@otskit/core": "file:../otskit-core",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@types/node": "^25.9.1",
