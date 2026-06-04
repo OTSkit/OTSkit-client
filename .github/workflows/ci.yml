@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -13,75 +13,30 @@ jobs:
   test:
     name: Test on Node.js ${{ matrix.node-version }}
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         node-version: [20.x, 22.x]
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: "Clone otskit-core (file: dependency)"
-        run: git clone https://github.com/OTSkit/OTSkit-core.git ../otskit-core
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
-
-      - name: Build otskit-core
-        run: cd ../otskit-core && npm install && npm run build
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run linter
-        run: npm run lint --if-present
-
-      - name: Run tests
-        run: npm test
-
-      - name: Run tests with coverage
-        run: npm test -- --coverage
-        if: matrix.node-version == '20.x'
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        if: matrix.node-version == '20.x'
-        with:
-          file: ./coverage/coverage-final.json
-          flags: unittests
-          name: codecov-umbrella
+      - run: npm install
+      - run: npm run lint --if-present
+      - run: npm test
 
   build:
     name: Build
     runs-on: ubuntu-latest
     needs: test
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: "Clone otskit-core (file: dependency)"
-        run: git clone https://github.com/OTSkit/OTSkit-core.git ../otskit-core
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '20.x'
-
-      - name: Build otskit-core
-        run: cd ../otskit-core && npm install && npm run build
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build package
-        run: npm run build
-
-      - name: Check build artifacts
-        run: |
+      - run: npm install
+      - run: npm run build
+      - run: |
           test -f dist/index.js
           test -f dist/index.cjs
           test -f dist/index.d.ts
@@ -91,36 +46,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     permissions:
       contents: write
       issues: write
       pull-requests: write
       id-token: write
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
-
-      - name: "Clone otskit-core (file: dependency)"
-        run: git clone https://github.com/OTSkit/OTSkit-core.git ../otskit-core
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '22.x'
-
-      - name: Build otskit-core
-        run: cd ../otskit-core && npm install && npm run build
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Release
-        run: npx semantic-release
+      - run: npm install
+      - run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
