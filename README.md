@@ -7,10 +7,12 @@
 > TypeScript/JavaScript client for OpenTimestamps with enterprise-grade resilience patterns
 
 [![CI](https://github.com/OTSkit/OTSkit-client/actions/workflows/ci.yml/badge.svg)](https://github.com/OTSkit/OTSkit-client/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/OTSkit/OTSkit-client/actions/workflows/codeql.yml/badge.svg)](https://github.com/OTSkit/OTSkit-client/actions/workflows/codeql.yml)
 [![npm version](https://img.shields.io/npm/v/@otskit/client.svg)](https://www.npmjs.com/package/@otskit/client)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
+[![npm downloads](https://img.shields.io/npm/dm/@otskit/client.svg)](https://www.npmjs.com/package/@otskit/client)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-blue.svg)](https://www.typescriptlang.org/)
+[![Node ≥20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 `@otskit/client` is the official client SDK for submitting, upgrading, and verifying [OpenTimestamps](https://opentimestamps.org) proofs. It sits on top of [@otskit/core](https://github.com/OTSkit/OTSkit-core) — the low-level protocol engine — and wraps it in a high-level API with production-ready resilience patterns built in.
 
