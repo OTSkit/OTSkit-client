@@ -37,6 +37,10 @@
 
 ---
 
+> **Note on confirmation times:** After `stamp()`, the proof is `pending` — registered with calendar servers but not yet anchored to Bitcoin. Confirmations typically arrive within **10–60 minutes**, but can take **several hours** during periods of high network congestion. Call `upgrade()` periodically to check; an `UpgradeError` simply means the blockchain hasn't confirmed yet, not that anything went wrong.
+
+---
+
 ## Installation
 
 ```bash
