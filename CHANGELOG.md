@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/OTSkit/OTSkit-client/compare/v1.0.2...v1.0.3) (2026-06-04)
+
+
+### Bug Fixes
+
+* restore version to 0.1.1 [skip ci] ([24f5e44](https://github.com/OTSkit/OTSkit-client/commit/24f5e446fe425343c80c2a8bdd50e3c085d2d054))
+
 ## [1.0.2](https://github.com/OTSkit/OTSkit-client/compare/v1.0.1...v1.0.2) (2026-06-03)
 
 
