@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/OTSkit/OTSkit-client/compare/v1.0.3...v1.0.4) (2026-06-04)
+
+
+### Bug Fixes
+
+* **ci:** restore otskit-core clone, revert actions to v4 ([2cef9da](https://github.com/OTSkit/OTSkit-client/commit/2cef9da970f5df5a5170adb853dccf77d336205a))
+
 ## [1.0.3](https://github.com/OTSkit/OTSkit-client/compare/v1.0.2...v1.0.3) (2026-06-04)
 
 
