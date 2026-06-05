@@ -1,3 +1,10 @@
+## [0.1.3](https://github.com/OTSkit/OTSkit-client/compare/v0.1.2...v0.1.3) (2026-06-05)
+
+
+### Bug Fixes
+
+* run build before semantic-release so dist/ is included in npm publish ([04a7bd3](https://github.com/OTSkit/OTSkit-client/commit/04a7bd34fe4bd049a68d0d3000faa82bc0bef192))
+
 ## [1.0.4](https://github.com/OTSkit/OTSkit-client/compare/v1.0.3...v1.0.4) (2026-06-04)
 
 
