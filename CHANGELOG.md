@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/OTSkit/OTSkit-client/compare/v0.1.3...v0.2.0) (2026-06-05)
+
+
+### Features
+
+* add hashBuffer and hashFile utilities to public API ([cb67373](https://github.com/OTSkit/OTSkit-client/commit/cb673732d3e1987dc67746afc73116438e7c5209))
+
 ## [0.1.3](https://github.com/OTSkit/OTSkit-client/compare/v0.1.2...v0.1.3) (2026-06-05)
 
 
