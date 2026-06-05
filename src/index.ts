@@ -64,3 +64,6 @@ export { DetachedTimestampFile, Timestamp } from '@otskit/core'
 // Needed by E2E suite
 export { ResilientNetworkLayer } from './network/resilience.js'
 export { verifyAgainstBlockheader } from '@otskit/core'
+
+// Hashing utilities
+export { hashBuffer, hashFile } from './utils/hash.js'
