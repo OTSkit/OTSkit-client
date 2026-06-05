@@ -72,6 +72,7 @@ jobs:
       - name: Build otskit-core
         run: cd ../otskit-core && npm install && npm run build
       - run: npm install
+      - run: npm run build
       - run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
