@@ -36,6 +36,7 @@
 - **Tree-shakeable** — Dual ESM/CJS build, zero runtime dependencies
 - **`AbortController` support** — Cancel any in-flight operation at any level
 - **Observable** — Drop-in `Logger` interface compatible with `console`, `pino`, `winston`, etc.
+- **Built-in SHA-256 helpers** — `hashFile()` and `hashBuffer()` so you don't need to wire up `crypto` yourself
 
 ---
 
@@ -56,15 +57,13 @@ npm install @otskit/client
 ## Quick Start
 
 ```typescript
-import { OpenTimestampsClient } from '@otskit/client'
-import { createHash } from 'crypto'
-import { readFileSync, writeFileSync } from 'fs'
+import { OpenTimestampsClient, hashFile } from '@otskit/client'
+import { writeFileSync } from 'fs'
 
 const client = new OpenTimestampsClient()
 
 // 1. Hash the file you want to timestamp
-const fileBytes = readFileSync('contract.pdf')
-const hash = createHash('sha256').update(fileBytes).digest()
+const hash = await hashFile('contract.pdf')
 
 // 2. Submit to calendars → get a pending .ots proof
 const pendingProof = await client.stamp(hash)
@@ -89,20 +88,33 @@ if (result.valid) {
 
 ## Usage
 
+### Hashing files and data
+
+Use the built-in helpers to compute SHA-256 without importing `crypto` yourself:
+
+```typescript
+import { hashFile, hashBuffer } from '@otskit/client'
+
+// From a file path (streaming — safe for large files)
+const hash = await hashFile('contract.pdf')
+
+// From bytes already in memory
+const hash = hashBuffer(Buffer.from('hello world'))
+const hash = hashBuffer(new Uint8Array([...]))
+```
+
+Both return a 32-byte `Buffer` ready to pass directly to `stamp()`.
+
 ### Stamping data
 
 `stamp()` accepts either a 32-byte `Buffer` or a 64-character hex string:
 
 ```typescript
-import { createHash } from 'crypto'
+// From hashFile / hashBuffer
+const proof = await client.stamp(await hashFile('contract.pdf'))
 
-// From a Buffer
-const hashBuffer = createHash('sha256').update(fileBytes).digest()
-const proof = await client.stamp(hashBuffer)
-
-// From a hex string
-const hashHex = createHash('sha256').update(fileBytes).digest('hex')
-const proof = await client.stamp(hashHex)
+// Or a hex string
+const proof = await client.stamp('a'.repeat(64))
 ```
 
 Internally, `stamp()` prepends a 16-byte cryptographic nonce to each submission, builds a Merkle tree over all concurrent submissions, and serializes the result as a standard `.ots` file.
@@ -393,6 +405,31 @@ All errors extend `OpenTimestampsClientError extends Error`.
 | `CommitmentNotFoundError extends NetworkError` | Calendar returned 404 for a commitment |
 | `CalendarResponseTooLargeError extends NetworkError` | Calendar response exceeded the 10 KB size limit |
 | `EsploraResponseError extends NetworkError` | Esplora returned an invalid, malformed, or oversized response |
+
+---
+
+### Utility functions
+
+#### `hashFile(path): Promise<Buffer>`
+
+Returns the SHA-256 hash of a file as a 32-byte `Buffer`. Reads the file as a stream — safe for large files.
+
+```typescript
+import { hashFile } from '@otskit/client'
+
+const hash = await hashFile('contract.pdf')
+const proof = await client.stamp(hash)
+```
+
+#### `hashBuffer(data): Buffer`
+
+Returns the SHA-256 hash of a `Buffer` or `Uint8Array` synchronously.
+
+```typescript
+import { hashBuffer } from '@otskit/client'
+
+const hash = hashBuffer(Buffer.from('my data'))
+```
 
 ---
 
