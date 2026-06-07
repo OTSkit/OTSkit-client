@@ -151,6 +151,25 @@ describe('verifyTimestampAttestation', () => {
   })
 })
 
+describe('EsploraClient — decodificación UTF-8', () => {
+  it('bytes UTF-8 inválidos en blockHash → EsploraResponseError con "invalid UTF-8"', async () => {
+    // 0xFF es un byte inválido en UTF-8; con fatal:false se reemplaza silenciosamente,
+    // con fatal:true debe lanzar EsploraResponseError explícito.
+    server.use(
+      http.get(`${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`, () =>
+        new HttpResponse(new Uint8Array([0x61, 0xFF, 0x62]), {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' },
+        })
+      )
+    )
+    let error: unknown
+    try { await newClient().blockHash(HEIGHT) } catch (e) { error = e }
+    expect(error).toBeInstanceOf(EsploraResponseError)
+    expect((error as Error).message).toContain('invalid UTF-8')
+  })
+})
+
 describe('EsploraClient — validación de URL base', () => {
   it('rechaza una URL base no http(s)', () => {
     expect(() => new EsploraClient(newLayer(), { url: 'ftp://example.com' })).toThrow(ValidationError)

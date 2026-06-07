@@ -103,7 +103,15 @@ export class EsploraClient {
         `esplora response of ${data.length} bytes exceeds limit ${MAX_ESPLORA_RESPONSE_SIZE}`,
       )
     }
-    return new TextDecoder('utf-8', { fatal: false }).decode(data)
+    // fatal:true — la API de Esplora es ASCII puro; bytes no-UTF-8 indican
+    // respuesta corrupta o servidor comprometido. Fail-closed explícito.
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(data)
+    } catch (cause) {
+      throw new EsploraResponseError('esplora response contains invalid UTF-8 bytes', {
+        cause: cause instanceof Error ? cause : undefined,
+      })
+    }
   }
 }
 
