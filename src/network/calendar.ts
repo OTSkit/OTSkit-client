@@ -6,7 +6,7 @@ import { ResilientNetworkLayer } from './resilience.js'
 import { Logger } from '../types.js'
 import { CommitmentNotFoundError, CalendarResponseTooLargeError, NetworkError } from '../errors.js'
 
-/** Límite de tamaño de la respuesta de un calendario (defensa DoS). */
+/** Limite de tamano de la respuesta de un calendario (defensa DoS). */
 export const MAX_CALENDAR_RESPONSE_SIZE = 10000
 
 /** Valida un commitment en la frontera (fail-closed): Uint8Array de longitud razonable. */
@@ -37,7 +37,7 @@ export class CalendarClient {
     private readonly logger?: Logger,
   ) {}
 
-  /** Envía un digest al calendario y devuelve el Timestamp que lo commit-ea. */
+  /** Envia un digest al calendario y devuelve el Timestamp que lo commit-ea. */
   async submit(digest: Uint8Array, signal?: AbortSignal): Promise<Timestamp> {
     assertCommitment(digest)
     this.logger?.debug(`Submitting digest to ${this.url}/digest`)
@@ -49,7 +49,7 @@ export class CalendarClient {
     return this.#parseTimestamp(response.data, digest)
   }
 
-  /** Pregunta al calendario si tiene un Timestamp más completo para `commitment` (upgrade). */
+  /** Pregunta al calendario si tiene un Timestamp mas completo para `commitment` (upgrade). */
   async getTimestamp(commitment: Uint8Array, signal?: AbortSignal): Promise<Timestamp> {
     assertCommitment(commitment)
     const path = `/timestamp/${bytesToHex(commitment)}`
@@ -81,23 +81,58 @@ export class CalendarClient {
     }
     const ctx = new StreamDeserializationContext(data)
     const timestamp = Timestamp.deserialize(ctx, commitment)
-    ctx.assertEof() // fail-closed: no se admiten bytes colgando tras el árbol
+    ctx.assertEof() // fail-closed: no se admiten bytes colgando tras el arbol
     return timestamp
   }
 }
 
-/** Convierte un patrón con comodín `*` en un RegExp anclado; `*` ≡ «chars salvo `/`». */
-function wildcardToRegExp(pattern: string): RegExp {
-  // Escapa TODOS los metacaracteres regex (incluido `?`, que en URL es literal), luego
-  // reactiva solo `*` como comodín que no cruza la barra de path.
-  const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '[^/]*')
-  // Flag `i`: los hosts son case-insensitive (un host en mayúsculas debe casar igual).
-  return new RegExp(`^${escaped}$`, 'i')
+type WhitelistPattern = {
+  readonly protocol: 'http:' | 'https:'
+  readonly hostname: string
+  readonly port: string
+  readonly pathname: string
+  readonly wildcardSuffix?: string
+}
+
+function parseWhitelistPattern(raw: string): WhitelistPattern | undefined {
+  let parsed: URL
+  try {
+    parsed = new URL(raw)
+  } catch {
+    return undefined
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
+
+  const hostname = parsed.hostname.toLowerCase()
+  const wildcardSuffix = hostname.startsWith('*.') ? hostname.slice(2) : undefined
+
+  // A hostname wildcard is intentionally narrow: one DNS label only, never a URL glob.
+  if (hostname.includes('*') && wildcardSuffix === undefined) return undefined
+  if (wildcardSuffix !== undefined && (wildcardSuffix.length === 0 || wildcardSuffix.includes('*'))) return undefined
+
+  return {
+    protocol: parsed.protocol,
+    hostname,
+    port: parsed.port,
+    pathname: parsed.pathname,
+    wildcardSuffix,
+  }
+}
+
+function hostnameMatchesPattern(hostname: string, pattern: WhitelistPattern): boolean {
+  if (pattern.wildcardSuffix === undefined) return hostname === pattern.hostname
+
+  if (!hostname.endsWith('.' + pattern.wildcardSuffix)) return false
+  const label = hostname.slice(0, -pattern.wildcardSuffix.length - 1)
+
+  // Allowing dots here turns "*.example.com" into an open-ended suffix match.
+  return label.length > 0 && !label.includes('.')
 }
 
 /** Lista blanca de URLs de calendario de confianza. */
 export class UrlWhitelist {
-  readonly #patterns = new Set<string>()
+  readonly #patterns = new Map<string, WhitelistPattern>()
 
   constructor(urls?: readonly string[]) {
     if (urls) {
@@ -105,35 +140,54 @@ export class UrlWhitelist {
     }
   }
 
-  /** Añade un patrón; si no trae esquema, se añaden las variantes http y https. */
+  /** Anade un patron; si no trae esquema, se anaden las variantes http y https. */
   add(url: string): void {
     if (typeof url !== 'string') {
       throw new TypeError('UrlWhitelist: URL must be a string')
     }
     if (url.startsWith('http://') || url.startsWith('https://')) {
-      this.#patterns.add(url)
+      const pattern = parseWhitelistPattern(url)
+      if (pattern !== undefined) this.#patterns.set(url, pattern)
     } else {
-      this.#patterns.add('http://' + url)
-      this.#patterns.add('https://' + url)
+      this.add('http://' + url)
+      this.add('https://' + url)
     }
   }
 
-  /** Verdadero si `url` casa con algún patrón de la whitelist. */
+  /** Verdadero si `url` casa con algun patron de la whitelist. */
   contains(url: string): boolean {
-    for (const pattern of this.#patterns) {
-      if (wildcardToRegExp(pattern).test(url)) return true
+    let parsed: URL
+    try {
+      parsed = new URL(url)
+    } catch {
+      return false
+    }
+
+    // SSRF defense starts with protocol allowlisting; non-HTTP schemes can target local resources.
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+
+    // Calendar attestations name base calendar URLs; query/fragment text must not influence hostname checks.
+    if (parsed.search !== '' || parsed.hash !== '') return false
+
+    const hostname = parsed.hostname.toLowerCase()
+    for (const pattern of this.#patterns.values()) {
+      // Scheme and port are part of the authority boundary, so they must be explicitly allowed.
+      if (parsed.protocol !== pattern.protocol || parsed.port !== pattern.port) continue
+      if (parsed.pathname !== pattern.pathname) continue
+      if (hostnameMatchesPattern(hostname, pattern)) return true
     }
     return false
   }
 
   toString(): string {
-    return `UrlWhitelist([${[...this.#patterns].join(', ')}])`
+    return `UrlWhitelist([${[...this.#patterns.keys()].join(', ')}])`
   }
 }
 
-/** Calendarios de confianza por defecto para verificación/upgrade. */
+/** Calendarios de confianza por defecto para verificacion/upgrade. */
 export const DEFAULT_CALENDAR_WHITELIST = new UrlWhitelist([
   'https://*.calendar.opentimestamps.org', // Peter Todd
+  'https://*.btc.calendar.opentimestamps.org', // Peter Todd Bitcoin calendars
   'https://*.calendar.eternitywall.com', // Eternity Wall
   'https://*.calendar.catallaxy.com', // Catallaxy
 ])
