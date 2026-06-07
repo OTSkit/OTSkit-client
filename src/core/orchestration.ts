@@ -56,18 +56,6 @@ function timingSafeEq(a: Uint8Array, b: Uint8Array): boolean {
 const bytesEqFast = (a: Uint8Array, b: Uint8Array): boolean =>
   Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0
 
-/** Valida que una URL sea http(s) bien formada (fail-closed en la frontera). */
-function assertHttpUrl(url: string, label: string): void {
-  let parsed: URL
-  try {
-    parsed = new URL(url)
-  } catch {
-    throw new ValidationError(`${label} is not a valid URL: ${url}`)
-  }
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    throw new ValidationError(`${label} must use http(s): ${url}`)
-  }
-}
 
 /**
  * stamp: construye el árbol (digest → append(nonce) → SHA256 → merkle root), lo envía a los
