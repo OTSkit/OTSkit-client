@@ -1,3 +1,31 @@
+# [1.0.0](https://github.com/OTSkit/OTSkit-client/compare/v0.2.0...v1.0.0) (2026-06-07)
+
+
+* feat!: replace VerificationResult with discriminated union for unambiguous verify() semantics ([c993eda](https://github.com/OTSkit/OTSkit-client/commit/c993edaef875e8abeb56cfe8e24888e0b2c0cbc9))
+
+
+### Bug Fixes
+
+* add SSRF protection for configurable calendar URLs ([faf1788](https://github.com/OTSkit/OTSkit-client/commit/faf17888f352bd1d6ae9ce405e1d0d5b4395acfb))
+* apply response size limit via ReadableStream before loading full body ([088c9d7](https://github.com/OTSkit/OTSkit-client/commit/088c9d7961602f4e31e69cd658369c51d30b1ad8))
+* limit Bitcoin attestation verification to prevent DoS via crafted proofs ([e72e5ca](https://github.com/OTSkit/OTSkit-client/commit/e72e5ca56ff8436d5cce36cd78d963a257c83af6))
+* remove unused assertHttpUrl after SSRF migration ([d0c94c9](https://github.com/OTSkit/OTSkit-client/commit/d0c94c97018a60b7d7e662a80bb3745fb37e4e54))
+* rewrite UrlWhitelist to use URL parsing instead of wildcardToRegExp ([7968731](https://github.com/OTSkit/OTSkit-client/commit/7968731e84109bd926c8b5ac754d47b307d32a7e))
+* rewrite UrlWhitelist using URL.hostname to prevent bypass attacks ([23344eb](https://github.com/OTSkit/OTSkit-client/commit/23344ebf453cadc23504469c94c367d194b5791e))
+* strip IPv6 brackets before isIP check in assertSafeCalendarUrl ([6f47e78](https://github.com/OTSkit/OTSkit-client/commit/6f47e7824839ece1b4ef90a4e1e9c5722e8a28fc))
+* use constant-time comparison for file hash verification ([5c7c458](https://github.com/OTSkit/OTSkit-client/commit/5c7c4585f8e46e9a8d52503fc6d0c06139336f51))
+* use fatal UTF-8 decoding in EsploraClient ([2c03f04](https://github.com/OTSkit/OTSkit-client/commit/2c03f047b5340c890f5c254f151417ea0ef3146e))
+
+
+### BREAKING CHANGES
+
+* VerificationResult ya no tiene campo 'valid: boolean'.
+Usar result.status: 'verified' | 'pending' | 'invalid' | 'network_error'.
+Migración: reemplazar if(result.valid) por if(result.status === 'verified').
+Proofs corruptos o hashes inválidos ahora lanzan ValidationError en vez de devolver valid:false.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
 # [0.2.0](https://github.com/OTSkit/OTSkit-client/compare/v0.1.3...v0.2.0) (2026-06-05)
 
 
