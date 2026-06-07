@@ -10,6 +10,7 @@ import {
   DEFAULT_RESILIENCE,
   ResilienceOptions,
 } from './types.js'
+import { InternalClientOptions } from './internal.js'
 import { ResilientNetworkLayer } from './network/resilience.js'
 import { orchestrateStamp, orchestrateUpgrade, orchestrateVerify } from './core/orchestration.js'
 
@@ -82,8 +83,8 @@ export class OpenTimestampsClient {
 
     this.logger = options.logger
     this.globalSignal = options.signal
-    // Allow injecting a custom network layer (for testing/recording)
-    this.networkLayer = (options as any).networkLayer ?? new ResilientNetworkLayer(resilienceConfig, this.logger)
+    const internalOptions = options as InternalClientOptions
+    this.networkLayer = internalOptions._networkLayer ?? new ResilientNetworkLayer(resilienceConfig, this.logger)
 
     this.logger?.info(`OpenTimestamps client initialized with ${this.calendars.length} calendars`)
   }
