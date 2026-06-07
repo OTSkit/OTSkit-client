@@ -11,6 +11,7 @@ import {
 import { ResilientNetworkLayer } from '../network/resilience.js'
 import { CalendarClient, DEFAULT_CALENDAR_WHITELIST } from '../network/calendar.js'
 import { EsploraClient, verifyTimestampAttestation } from '../network/esplora.js'
+import { timingSafeEqual } from 'node:crypto'
 import { ValidationError, StampError, UpgradeError, CommitmentNotFoundError } from '../errors.js'
 import { Logger, VerificationResult } from '../types.js'
 
@@ -41,7 +42,14 @@ function secureNonce(n: number): Uint8Array {
   return bytes
 }
 
-const bytesEq = (a: Uint8Array, b: Uint8Array): boolean =>
+/** Comparación byte a byte en tiempo constante — para hashes que provienen del usuario. */
+function timingSafeEq(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false
+  return timingSafeEqual(a, b)
+}
+
+/** Comparación rápida para datos públicos donde el timing no importa. */
+const bytesEqFast = (a: Uint8Array, b: Uint8Array): boolean =>
   Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0
 
 /** Valida que una URL sea http(s) bien formada (fail-closed en la frontera). */
@@ -177,7 +185,7 @@ export async function orchestrateUpgrade(
   }
 
   const after = detached.serializeToBytes()
-  if (bytesEq(before, after)) {
+  if (bytesEqFast(before, after)) {
     throw new UpgradeError('No calendar has confirmed the timestamp yet (Bitcoin not yet mined)')
   }
   return Buffer.from(after)
@@ -209,7 +217,7 @@ export async function orchestrateVerify(
       /* v8 ignore next */
       return { valid: false, error: err instanceof Error ? err.message : 'Invalid hash format' }
     }
-    if (!bytesEq(expected, detached.fileDigest())) {
+    if (!timingSafeEq(expected, detached.fileDigest())) {
       return { valid: false, error: 'File hash does not match proof' }
     }
   }
