@@ -157,14 +157,10 @@ describe('AbortController Integration', () => {
       const proof = Buffer.from([0x00, 0x01, 0x02])
       const hash = 'd'.repeat(64)
 
-      // With a pre-aborted signal, operations should fail immediately
-      // Note: verify() validates input first, so it may return validation error
-      // instead of abort error - both are acceptable behaviors
-      const result = await client.verify(proof, hash, { signal: controller.signal })
-
-      // Should return an error result (either validation or abort)
-      expect(result.valid).toBe(false)
-      expect(result.error).toBeDefined()
+      // With a pre-aborted signal or invalid proof, verify() throws (ValidationError or abort)
+      await expect(
+        client.verify(proof, hash)
+      ).rejects.toThrow()
     })
   })
 

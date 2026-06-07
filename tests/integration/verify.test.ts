@@ -10,47 +10,51 @@ import { MAX_BITCOIN_ATTESTATIONS } from '../../src/core/orchestration.js'
 describe('verify() - Integration', () => {
   it('verifica una prueba completa contra la cadena', async () => {
     const result = await new OpenTimestampsClient().verify(Buffer.from(FAKE_COMPLETE_OTS))
-    expect(result.valid).toBe(true)
-    expect(result.blockHeight).toBe(BITCOIN_HEIGHT)
-    expect(result.timestamp).toBe(BLOCK_TIME)
+    expect(result.status).toBe('verified')
+    if (result.status === 'verified') {
+      expect(result.blockHeight).toBe(BITCOIN_HEIGHT)
+      expect(result.blockTime).toBe(BLOCK_TIME)
+    }
   })
 
   it('verifica con el hash original correcto', async () => {
     const result = await new OpenTimestampsClient().verify(Buffer.from(FAKE_COMPLETE_OTS), 'aa'.repeat(32))
-    expect(result.valid).toBe(true)
+    expect(result.status).toBe('verified')
   })
 
   it('falla si el hash original no coincide', async () => {
     const result = await new OpenTimestampsClient().verify(Buffer.from(FAKE_COMPLETE_OTS), 'bb'.repeat(32))
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('File hash does not match')
+    expect(result.status).toBe('invalid')
+    if (result.status === 'invalid') expect(result.reason).toContain('File hash does not match')
   })
 
   it('falla (no Bitcoin) para una prueba incompleta', async () => {
     const result = await new OpenTimestampsClient().verify(Buffer.from(FAKE_INCOMPLETE_OTS))
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('No Bitcoin attestation found')
+    expect(result.status).toBe('pending')
+    if (result.status === 'pending') expect(result.reason).toContain('No Bitcoin attestation found')
   })
 
-  it('falla para un .ots con formato inválido', async () => {
-    const result = await new OpenTimestampsClient().verify(Buffer.from([0xff, 0xff, 0xff]))
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('Invalid .ots proof format')
+  it('falla para un .ots con formato inválido — lanza ValidationError', async () => {
+    const { ValidationError } = await import('../../src/errors.js')
+    await expect(
+      new OpenTimestampsClient().verify(Buffer.from([0xff, 0xff, 0xff]))
+    ).rejects.toThrow(ValidationError)
   })
 
-  it('fail-closed: si Esplora falla, la verificación NO es válida', async () => {
+  it('fail-closed: si Esplora falla, devuelve network_error', async () => {
     server.use(
       http.get('https://blockstream.info/api/block-height/:height', () => HttpResponse.error())
     )
     const result = await new OpenTimestampsClient().verify(Buffer.from(FAKE_COMPLETE_OTS))
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('Could not verify against the Bitcoin blockchain')
+    expect(result.status).toBe('network_error')
+    if (result.status === 'network_error') expect(result.reason).toContain('Could not reach Bitcoin blockchain')
   })
 
-  it('valida el formato del hash hex pasado', async () => {
-    const result = await new OpenTimestampsClient().verify(Buffer.from(FAKE_COMPLETE_OTS), 'not-a-hex-string')
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('Hash must be a 64-character hex string')
+  it('hash hex inválido — lanza ValidationError', async () => {
+    const { ValidationError } = await import('../../src/errors.js')
+    await expect(
+      new OpenTimestampsClient().verify(Buffer.from(FAKE_COMPLETE_OTS), 'not-a-hex-string')
+    ).rejects.toThrow(ValidationError)
   })
 
   it('prueba TODAS las attestations Bitcoin: válida si una verifica aunque otra falle', async () => {
@@ -71,8 +75,8 @@ describe('verify() - Integration', () => {
       )
     )
     const result = await new OpenTimestampsClient().verify(Buffer.from(dtf.serializeToBytes()))
-    expect(result.valid).toBe(true)
-    expect(result.blockHeight).toBe(222222)
+    expect(result.status).toBe('verified')
+    if (result.status === 'verified') expect(result.blockHeight).toBe(222222)
   })
 
   it('MAX_BITCOIN_ATTESTATIONS está exportada y es razonable', () => {
@@ -86,7 +90,7 @@ describe('verify() - Integration', () => {
     const leaf = dtf.timestamp.add(new OpSHA256())
     leaf.attestations.push(makeLitecoin(800000))
     const result = await new OpenTimestampsClient().verify(Buffer.from(dtf.serializeToBytes()))
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('Litecoin verification is not supported')
+    expect(result.status).toBe('pending')
+    if (result.status === 'pending') expect(result.reason).toContain('Litecoin')
   })
 })

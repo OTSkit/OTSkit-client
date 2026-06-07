@@ -18,11 +18,15 @@ export type {
   CircuitBreakerOptions,
   Logger,
   VerificationResult,
+  VerificationSuccess,
+  VerificationPending,
+  VerificationInvalid,
+  VerificationNetworkError,
   BackoffStrategy,
   JitterType,
 } from './types.js'
 
-export { DEFAULT_CALENDARS, DEFAULT_RESILIENCE } from './types.js'
+export { DEFAULT_CALENDARS, DEFAULT_RESILIENCE, isVerified } from './types.js'
 
 // Errors
 export {
