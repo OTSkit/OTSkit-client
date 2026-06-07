@@ -336,7 +336,7 @@ describe('orchestrateVerify — ramas de logger', () => {
     const logger = { debug: vi.fn(), info, warn: vi.fn(), error: vi.fn() }
     const client = new OpenTimestampsClient({ logger })
     const result = await client.verify(Buffer.from(FAKE_COMPLETE_OTS))
-    expect(result.valid).toBe(true)
+    expect(result.status).toBe('verified')
     expect(info).toHaveBeenCalledWith(expect.stringContaining('Verified against Bitcoin'))
   })
 
@@ -348,8 +348,8 @@ describe('orchestrateVerify — ramas de logger', () => {
     )
     const client = new OpenTimestampsClient({ logger })
     const result = await client.verify(Buffer.from(FAKE_COMPLETE_OTS))
-    expect(result.valid).toBe(false)
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Bitcoin attestation'))
+    expect(result.status).toBe('network_error')
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Network error at block'))
   })
 })
 

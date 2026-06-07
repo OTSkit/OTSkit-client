@@ -12,7 +12,7 @@ import { ResilientNetworkLayer } from '../network/resilience.js'
 import { CalendarClient, DEFAULT_CALENDAR_WHITELIST } from '../network/calendar.js'
 import { EsploraClient, verifyTimestampAttestation } from '../network/esplora.js'
 import { timingSafeEqual } from 'node:crypto'
-import { ValidationError, StampError, UpgradeError, CommitmentNotFoundError } from '../errors.js'
+import { ValidationError, StampError, UpgradeError, CommitmentNotFoundError, NetworkError, EsploraResponseError } from '../errors.js'
 import { Logger, VerificationResult } from '../types.js'
 import { assertSafeCalendarUrl } from '../security/ssrf.js'
 
@@ -199,21 +199,24 @@ export async function orchestrateUpgrade(
 }
 
 /**
- * verify: localiza la attestation Bitcoin y la verifica en cadena (Esplora). Fail-closed:
- * cualquier fallo de red o de verificación devuelve { valid: false }.
+ * verify: localiza la attestation Bitcoin y la verifica en cadena (Esplora).
+ * Devuelve un union discriminado para que el caller pueda hacer narrowing exhaustivo.
  */
 export async function orchestrateVerify(
   proof: Buffer,
   networkLayer: ResilientNetworkLayer,
   originalDataHash?: Buffer | string,
   logger?: Logger,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<VerificationResult> {
+  // .ots corrupto → lanza ValidationError (igual que orchestrateUpgrade, coherencia de API)
   let detached: DetachedTimestampFile
   try {
     detached = DetachedTimestampFile.deserialize(new Uint8Array(proof))
-  } catch {
-    return { valid: false, error: 'Invalid .ots proof format' }
+  } catch (cause) {
+    throw new ValidationError('Invalid .ots proof format', {
+      cause: cause instanceof Error ? cause : undefined,
+    })
   }
 
   if (originalDataHash !== undefined) {
@@ -221,11 +224,13 @@ export async function orchestrateVerify(
     try {
       expected = validateHash(originalDataHash)
     } catch (err) {
-      /* v8 ignore next */
-      return { valid: false, error: err instanceof Error ? err.message : 'Invalid hash format' }
+      throw new ValidationError(
+        err instanceof Error ? err.message : 'Invalid hash format',
+        { cause: err instanceof Error ? err : undefined },
+      )
     }
     if (!timingSafeEq(expected, detached.fileDigest())) {
-      return { valid: false, error: 'File hash does not match proof' }
+      return { status: 'invalid', reason: 'File hash does not match proof — file may have been modified' }
     }
   }
 
@@ -254,30 +259,53 @@ export async function orchestrateVerify(
   }
 
   if (bitcoinAtts.length === 0) {
-    const hasLitecoin = detached.timestamp.allAttestations().some(({ attestation }) => attestation.kind === 'litecoin')
-    if (hasLitecoin) {
-      return { valid: false, error: 'Litecoin verification is not supported by this client' }
+    const hasLitecoin = detached.timestamp
+      .allAttestations()
+      .some(({ attestation }) => attestation.kind === 'litecoin')
+    return {
+      status: 'pending',
+      reason: hasLitecoin
+        ? 'Litecoin-only attestation is not supported by this client'
+        : 'No Bitcoin attestation found — timestamp not yet confirmed',
     }
-    return { valid: false, error: 'No Bitcoin attestation found (timestamp not yet confirmed)' }
   }
 
   const explorer = new EsploraClient(networkLayer)
-  let lastError = ''
-  // Probar TODAS las attestations Bitcoin: válido si CUALQUIERA verifica (una prueba mala
-  // —p.ej. un bloque huérfano— no debe invalidar otra correcta). El merkleroot de Bitcoin
-  // es big-endian, así que invertimos el digest del árbol antes de verificar.
+  let lastNetworkError: string | undefined
+  let lastCryptoError: string | undefined
+
+  // Probar TODAS las attestations Bitcoin: válido si CUALQUIERA verifica. El merkleroot de
+  // Bitcoin es big-endian, así que invertimos el digest del árbol antes de verificar.
   for (const { msg, attestation } of bitcoinAtts) {
     /* v8 ignore next */
-    if (attestation.kind !== 'bitcoin') continue // narrowing (siempre cierto tras el filter)
+    if (attestation.kind !== 'bitcoin') continue
     try {
-      const time = await verifyTimestampAttestation(Uint8Array.from(msg).reverse(), attestation, explorer, signal)
+      const blockTime = await verifyTimestampAttestation(
+        Uint8Array.from(msg).reverse(),
+        attestation,
+        explorer,
+        signal,
+      )
       logger?.info(`Verified against Bitcoin block ${attestation.height}`)
-      return { valid: true, blockHeight: attestation.height, timestamp: time }
+      return { status: 'verified', blockHeight: attestation.height, blockTime }
     } catch (err) {
-      /* v8 ignore next */
-      lastError = err instanceof Error ? err.message : String(err)
-      logger?.warn(`Bitcoin attestation at height ${attestation.height} failed: ${lastError}`)
+      const message = err instanceof Error ? err.message : String(err)
+      if (err instanceof NetworkError || err instanceof EsploraResponseError) {
+        lastNetworkError = message
+        logger?.warn(`Network error at block ${attestation.height}: ${message}`)
+      } else {
+        lastCryptoError = message
+        logger?.warn(`Crypto verification failed at block ${attestation.height}: ${message}`)
+      }
     }
   }
-  return { valid: false, error: `Could not verify against the Bitcoin blockchain: ${lastError}` }
+
+  if (lastCryptoError !== undefined) {
+    return { status: 'invalid', reason: `Cryptographic verification failed: ${lastCryptoError}` }
+  }
+
+  return {
+    status: 'network_error',
+    reason: `Could not reach Bitcoin blockchain: ${lastNetworkError ?? 'unknown error'}`,
+  }
 }

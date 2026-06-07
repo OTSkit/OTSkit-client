@@ -81,14 +81,45 @@ export interface OperationOptions {
   signal?: AbortSignal
 }
 
-/** Verification result */
-export interface VerificationResult {
-  valid: boolean
-  blockHeight?: number
-  blockHash?: string
-  timestamp?: number
-  error?: string
+/** Verificación exitosa: prueba criptográficamente válida y confirmada en Bitcoin. */
+export interface VerificationSuccess {
+  readonly status: 'verified'
+  readonly blockHeight: number
+  readonly blockTime: number
+  readonly blockHash?: string
 }
+
+/** El timestamp es parseable pero aún no tiene confirmación Bitcoin. Estado normal. */
+export interface VerificationPending {
+  readonly status: 'pending'
+  readonly reason: string
+}
+
+/**
+ * La verificación criptográfica falló: el digest no coincide con el merkleroot.
+ * Indica posible manipulación del archivo o de la prueba.
+ */
+export interface VerificationInvalid {
+  readonly status: 'invalid'
+  readonly reason: string
+}
+
+/** Error de infraestructura: Esplora no disponible. El estado del timestamp es desconocido. */
+export interface VerificationNetworkError {
+  readonly status: 'network_error'
+  readonly reason: string
+}
+
+/** Resultado de verify(). Usar switch(result.status) para narrowing exhaustivo. */
+export type VerificationResult =
+  | VerificationSuccess
+  | VerificationPending
+  | VerificationInvalid
+  | VerificationNetworkError
+
+/** Type guard — verdadero si la verificación fue exitosa. */
+export const isVerified = (r: VerificationResult): r is VerificationSuccess =>
+  r.status === 'verified'
 
 /** Default calendar servers */
 export const DEFAULT_CALENDARS = [
