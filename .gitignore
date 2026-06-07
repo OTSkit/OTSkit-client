@@ -26,6 +26,11 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# Agent instructions (local only)
+CLAUDE.md
+GEMINI.md
+AGENTS.md
+
 # Logs
 *.log
 npm-debug.log*
