@@ -112,10 +112,14 @@ export async function assertSafeCalendarUrl(
   if (options.allowPrivate) return
 
   const hostname = parsed.hostname
-  const ipVersion = isIP(hostname)
+  // new URL() incluye corchetes en IPv6: "[::1]" → quitarlos para isIP/assertNot*
+  const host = hostname.startsWith('[') && hostname.endsWith(']')
+    ? hostname.slice(1, -1)
+    : hostname
+  const ipVersion = isIP(host)
 
-  if (ipVersion === 4) { assertNotPrivateIPv4(hostname, url); return }
-  if (ipVersion === 6) { assertNotPrivateIPv6(hostname, url); return }
+  if (ipVersion === 4) { assertNotPrivateIPv4(host, url); return }
+  if (ipVersion === 6) { assertNotPrivateIPv6(host, url); return }
 
   // Hostname — resolver DNS (sujeto a TOCTOU, ver JSDoc del módulo)
   let addresses: Array<{ address: string; family: number }>
