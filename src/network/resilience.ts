@@ -47,10 +47,10 @@ export class ResilientNetworkLayer {
             )
 
             try {
-              const response = await executeRequest({
-                ...request,
-                signal: attemptController.signal,
-              })
+              const response = await executeRequest(
+                { ...request, signal: attemptController.signal },
+                this.options.maxResponseBytes ?? 100_000,
+              )
 
               // Log success
               const elapsed = Date.now() - startTime
@@ -77,8 +77,7 @@ export class ResilientNetworkLayer {
 
               return response
             } finally {
-              /* v8 ignore next */
-              attemptController.signal.removeEventListener('abort', () => {})
+              attemptController.abort(new Error('Attempt complete'))
             }
           },
           this.options.retries,
@@ -90,11 +89,9 @@ export class ResilientNetworkLayer {
       const elapsed = Date.now() - startTime
       this.logger?.error(`Request to ${calendarUrl} failed after ${elapsed}ms`, error)
       throw error
-    /* c8 ignore start */
     } finally {
-      totalController.signal.removeEventListener('abort', () => {})
+      totalController.abort(new Error('Request complete'))
     }
-    /* c8 ignore stop */
   }
 
   /** Get circuit breaker state for a calendar */

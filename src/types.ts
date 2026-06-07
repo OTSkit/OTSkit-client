@@ -42,6 +42,8 @@ export interface ResilienceOptions {
   connectTimeoutMs: number
   retries: RetryOptions
   circuitBreaker: CircuitBreakerOptions
+  /** Límite de bytes para el body de la respuesta. Default 100 KB. */
+  maxResponseBytes?: number
 }
 
 /** Client configuration options */

@@ -6,7 +6,7 @@ import {
   PUBLIC_ESPLORA_URL,
   MAX_ESPLORA_RESPONSE_SIZE,
 } from '../../src/network/esplora.js'
-import { EsploraResponseError, NetworkError, ValidationError } from '../../src/errors.js'
+import { EsploraResponseError, NetworkError, SizeLimitExceededError, ValidationError } from '../../src/errors.js'
 import { ResilientNetworkLayer } from '../../src/network/resilience.js'
 import { DEFAULT_RESILIENCE } from '../../src/types.js'
 
@@ -46,13 +46,13 @@ describe('EsploraClient.blockHash', () => {
     await expect(newClient().blockHash(HEIGHT)).rejects.toBeInstanceOf(EsploraResponseError)
   })
 
-  it('respuesta mayor que el límite → EsploraResponseError', async () => {
+  it('respuesta mayor que el límite → SizeLimitExceededError (detectado en transporte)', async () => {
     server.use(
       http.get(`${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`, () =>
         HttpResponse.text('x'.repeat(MAX_ESPLORA_RESPONSE_SIZE + 1))
       )
     )
-    await expect(newClient().blockHash(HEIGHT)).rejects.toBeInstanceOf(EsploraResponseError)
+    await expect(newClient().blockHash(HEIGHT)).rejects.toBeInstanceOf(SizeLimitExceededError)
   })
 
   it('404 del explorador → NetworkError (no EsploraResponseError silencioso)', async () => {

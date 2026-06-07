@@ -63,3 +63,20 @@ export class CalendarResponseTooLargeError extends NetworkError {}
 
 /** Respuesta del explorador Esplora inválida: vacía, no-JSON, malformada o demasiado grande (defensa DoS). */
 export class EsploraResponseError extends NetworkError {}
+
+/** La respuesta supera el límite de bytes permitido (defensa DoS). */
+export class SizeLimitExceededError extends NetworkError {
+  public readonly maxBytes: number
+  public readonly actualBytes?: number
+
+  constructor(maxBytes: number, actualBytes?: number, options?: { cause?: Error; status?: number }) {
+    super(
+      actualBytes === undefined
+        ? `Response size exceeds limit of ${maxBytes} bytes`
+        : `Response size ${actualBytes} bytes exceeds limit of ${maxBytes} bytes`,
+      options,
+    )
+    this.maxBytes = maxBytes
+    this.actualBytes = actualBytes
+  }
+}
