@@ -1,3 +1,23 @@
+# [0.3.0](https://github.com/OTSkit/OTSkit-client/compare/v0.2.0...v0.3.0) (2026-06-07)
+
+
+### Bug Fixes
+
+* add SSRF protection for configurable calendar URLs ([faf1788](https://github.com/OTSkit/OTSkit-client/commit/faf17888f352bd1d6ae9ce405e1d0d5b4395acfb))
+* apply response size limit via ReadableStream before loading full body ([088c9d7](https://github.com/OTSkit/OTSkit-client/commit/088c9d7961602f4e31e69cd658369c51d30b1ad8))
+* limit Bitcoin attestation verification to prevent DoS via crafted proofs ([e72e5ca](https://github.com/OTSkit/OTSkit-client/commit/e72e5ca56ff8436d5cce36cd78d963a257c83af6))
+* remove unused assertHttpUrl after SSRF migration ([39681cf](https://github.com/OTSkit/OTSkit-client/commit/39681cf90cbd2417135faf09b19ffcac2496dd62))
+* rewrite UrlWhitelist to use URL parsing instead of wildcardToRegExp ([7968731](https://github.com/OTSkit/OTSkit-client/commit/7968731e84109bd926c8b5ac754d47b307d32a7e))
+* rewrite UrlWhitelist using URL.hostname to prevent bypass attacks ([23344eb](https://github.com/OTSkit/OTSkit-client/commit/23344ebf453cadc23504469c94c367d194b5791e))
+* strip IPv6 brackets before isIP check in assertSafeCalendarUrl ([f917493](https://github.com/OTSkit/OTSkit-client/commit/f917493731edb527eceb48c09c900d5ef4e18c76))
+* use constant-time comparison for file hash verification ([5c7c458](https://github.com/OTSkit/OTSkit-client/commit/5c7c4585f8e46e9a8d52503fc6d0c06139336f51))
+* use fatal UTF-8 decoding in EsploraClient ([2c03f04](https://github.com/OTSkit/OTSkit-client/commit/2c03f047b5340c890f5c254f151417ea0ef3146e))
+
+
+### Features
+
+* replace VerificationResult with discriminated union for unambiguous verify() semantics ([cced2fa](https://github.com/OTSkit/OTSkit-client/commit/cced2fad4b9545bc6185b88e3bb124aca2e22a1e))
+
 # [0.2.0](https://github.com/OTSkit/OTSkit-client/compare/v0.1.3...v0.2.0) (2026-06-05)
 
 
