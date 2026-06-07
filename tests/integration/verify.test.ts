@@ -5,6 +5,7 @@ import { server } from '../mocks/server.js'
 import { OpenTimestampsClient } from '../../src/client.js'
 import { DetachedTimestampFile, OpSHA256, OpAppend, makeBitcoin, bytesToHex } from '@otskit/core'
 import { FAKE_COMPLETE_OTS, FAKE_INCOMPLETE_OTS, BITCOIN_HEIGHT, BLOCK_TIME } from '../mocks/handlers.js'
+import { MAX_BITCOIN_ATTESTATIONS } from '../../src/core/orchestration.js'
 
 describe('verify() - Integration', () => {
   it('verifica una prueba completa contra la cadena', async () => {
@@ -72,6 +73,11 @@ describe('verify() - Integration', () => {
     const result = await new OpenTimestampsClient().verify(Buffer.from(dtf.serializeToBytes()))
     expect(result.valid).toBe(true)
     expect(result.blockHeight).toBe(222222)
+  })
+
+  it('MAX_BITCOIN_ATTESTATIONS está exportada y es razonable', () => {
+    expect(MAX_BITCOIN_ATTESTATIONS).toBeGreaterThan(0)
+    expect(MAX_BITCOIN_ATTESTATIONS).toBeLessThanOrEqual(20)
   })
 
   it('attestation litecoin → no soportado por este cliente', async () => {

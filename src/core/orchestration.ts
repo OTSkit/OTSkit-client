@@ -15,6 +15,9 @@ import { timingSafeEqual } from 'node:crypto'
 import { ValidationError, StampError, UpgradeError, CommitmentNotFoundError } from '../errors.js'
 import { Logger, VerificationResult } from '../types.js'
 
+/** Número máximo de Bitcoin attestations a verificar por proof. */
+export const MAX_BITCOIN_ATTESTATIONS = 10
+
 /** Valida un hash SHA-256 y lo devuelve como Uint8Array de 32 bytes. */
 function validateHash(hash: Buffer | string): Uint8Array {
   if (typeof hash === 'string') {
@@ -222,9 +225,29 @@ export async function orchestrateVerify(
     }
   }
 
-  const bitcoinAtts = detached.timestamp
+  const allBitcoin = detached.timestamp
     .allAttestations()
     .filter(({ attestation }) => attestation.kind === 'bitcoin')
+
+  // Deduplicar por altura: dos attestations al mismo bloque harían las mismas llamadas HTTP.
+  const seenHeights = new Set<number>()
+  const deduped = allBitcoin.filter(({ attestation }) => {
+    if (attestation.kind !== 'bitcoin') return false
+    if (seenHeights.has(attestation.height)) {
+      logger?.debug(`Skipping duplicate Bitcoin attestation at height ${attestation.height}`)
+      return false
+    }
+    seenHeights.add(attestation.height)
+    return true
+  })
+
+  // Límite contra proofs artesanales maliciosos que intenten provocar DoS.
+  const bitcoinAtts = deduped.slice(0, MAX_BITCOIN_ATTESTATIONS)
+  if (deduped.length > MAX_BITCOIN_ATTESTATIONS) {
+    logger?.warn(
+      `Proof has ${deduped.length} unique Bitcoin attestations; verifying only the first ${MAX_BITCOIN_ATTESTATIONS}`,
+    )
+  }
 
   if (bitcoinAtts.length === 0) {
     const hasLitecoin = detached.timestamp.allAttestations().some(({ attestation }) => attestation.kind === 'litecoin')
