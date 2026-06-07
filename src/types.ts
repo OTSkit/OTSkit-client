@@ -62,6 +62,18 @@ export interface ClientOptions {
   
   /** Minimum successful calendar submissions required (default: 2) */
   minimumSuccessfulSubmissions?: number
+
+  /**
+   * Permite URLs de calendario que resuelven a IPs privadas/reservadas.
+   *
+   * **No activar en producción.** Útil para testing local o redes corporativas.
+   *
+   * Incluso con `false`, la protección es best-effort contra DNS rebinding (TOCTOU).
+   * Para alta seguridad, complementar con egress filtering a nivel de red.
+   *
+   * @default false
+   */
+  allowPrivateCalendars?: boolean
 }
 
 /** Operation-specific options */

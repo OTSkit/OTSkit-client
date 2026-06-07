@@ -67,3 +67,7 @@ export { verifyAgainstBlockheader } from '@otskit/core'
 
 // Hashing utilities
 export { hashBuffer, hashFile } from './utils/hash.js'
+
+// Security utilities
+export { assertSafeCalendarUrl } from './security/ssrf.js'
+export { SizeLimitExceededError } from './errors.js'

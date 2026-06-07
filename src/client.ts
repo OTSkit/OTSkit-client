@@ -44,6 +44,7 @@ export class OpenTimestampsClient {
   private logger?: ClientOptions['logger']
   private globalSignal?: AbortSignal
   private minimumSuccessfulSubmissions: number
+  private allowPrivateCalendars: boolean
 
   /**
    * Create a new OpenTimestamps client
@@ -62,6 +63,7 @@ export class OpenTimestampsClient {
 
     // Set minimum successful submissions (default: 2)
     this.minimumSuccessfulSubmissions = options.minimumSuccessfulSubmissions ?? 2
+    this.allowPrivateCalendars = options.allowPrivateCalendars ?? false
 
     // Merge resilience options with defaults
     const resilienceConfig: ResilienceOptions = {
@@ -116,7 +118,8 @@ export class OpenTimestampsClient {
       this.networkLayer,
       this.logger,
       signal,
-      this.minimumSuccessfulSubmissions
+      this.minimumSuccessfulSubmissions,
+      this.allowPrivateCalendars,
     )
   }
 

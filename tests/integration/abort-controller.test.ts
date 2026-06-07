@@ -3,9 +3,15 @@
  */
 import { describe, it, expect } from 'vitest'
 import { OpenTimestampsClient } from '../../src/client.js'
+import type { ClientOptions } from '../../src/types.js'
 import { server } from '../mocks/server.js'
 import { http, HttpResponse, delay } from 'msw'
 import { Timestamp, StreamSerializationContext, makePending } from '@otskit/core'
+
+// Calendarios *.example.com no se pueden resolver por DNS en los tests; allowPrivateCalendars
+// desactiva la validación SSRF para que los tests de abort/timeout funcionen correctamente.
+const localClient = (options: Omit<ClientOptions, 'allowPrivateCalendars'> = {}) =>
+  new OpenTimestampsClient({ ...options, allowPrivateCalendars: true })
 
 /** Respuesta OTS canónica mínima para un digest arbitrario. */
 function pendingOtsResponse(body: ArrayBuffer): ArrayBuffer {
@@ -22,7 +28,7 @@ describe('AbortController Integration', () => {
 
   describe('stamp() cancellation', () => {
     it('should abort stamp operation when signal is aborted', async () => {
-      const client = new OpenTimestampsClient({
+      const client = localClient({
         calendars: ['https://slow-calendar.example.com'],
       })
 
@@ -46,7 +52,7 @@ describe('AbortController Integration', () => {
     })
 
     it('should abort stamp operation mid-flight across multiple calendars', async () => {
-      const client = new OpenTimestampsClient({
+      const client = localClient({
         calendars: [
           'https://calendar1.example.com',
           'https://calendar2.example.com',
@@ -74,7 +80,7 @@ describe('AbortController Integration', () => {
     })
 
     it('should not abort if signal is never triggered', async () => {
-      const client = new OpenTimestampsClient({
+      const client = localClient({
         calendars: ['https://fast-calendar.example.com'],
         minimumSuccessfulSubmissions: 1,
       })
@@ -97,7 +103,7 @@ describe('AbortController Integration', () => {
 
   describe('upgrade() cancellation', () => {
     it('should abort upgrade operation when signal is aborted', async () => {
-      const client = new OpenTimestampsClient({
+      const client = localClient({
         calendars: ['https://slow-calendar.example.com'],
       })
 
@@ -164,7 +170,7 @@ describe('AbortController Integration', () => {
 
   describe('timeout handling', () => {
     it('should timeout if operation exceeds timeout duration', async () => {
-      const client = new OpenTimestampsClient({
+      const client = localClient({
         calendars: ['https://very-slow-calendar.example.com'],
         minimumSuccessfulSubmissions: 1,
         resilience: {
@@ -192,7 +198,7 @@ describe('AbortController Integration', () => {
     }, 15000) // Increase test timeout to 15 seconds
 
     it('should complete if operation finishes within timeout', async () => {
-      const client = new OpenTimestampsClient({
+      const client = localClient({
         calendars: ['https://fast-calendar.example.com'],
         minimumSuccessfulSubmissions: 1,
         resilience: {
@@ -220,7 +226,7 @@ describe('AbortController Integration', () => {
 
   describe('AbortSignal propagation', () => {
     it('should propagate parent signal to child operations', async () => {
-      const client = new OpenTimestampsClient({
+      const client = localClient({
         calendars: ['https://calendar1.example.com', 'https://calendar2.example.com'],
         minimumSuccessfulSubmissions: 1,
       })
@@ -250,7 +256,7 @@ describe('AbortController Integration', () => {
     })
 
     it('should not affect other operations when one is aborted', async () => {
-      const client = new OpenTimestampsClient({
+      const client = localClient({
         calendars: ['https://calendar.example.com'],
         minimumSuccessfulSubmissions: 1,
       })
@@ -282,7 +288,7 @@ describe('AbortController Integration', () => {
 
   describe('edge cases', () => {
     it('should handle abort during retry backoff', async () => {
-      const client = new OpenTimestampsClient({
+      const client = localClient({
         calendars: ['https://flaky-calendar.example.com'],
         minimumSuccessfulSubmissions: 1,
         resilience: {
@@ -323,7 +329,7 @@ describe('AbortController Integration', () => {
     })
 
     it('should clean up resources when aborted', async () => {
-      const client = new OpenTimestampsClient({
+      const client = localClient({
         calendars: ['https://calendar.example.com'],
         minimumSuccessfulSubmissions: 1,
       })

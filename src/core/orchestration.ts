@@ -14,6 +14,7 @@ import { EsploraClient, verifyTimestampAttestation } from '../network/esplora.js
 import { timingSafeEqual } from 'node:crypto'
 import { ValidationError, StampError, UpgradeError, CommitmentNotFoundError } from '../errors.js'
 import { Logger, VerificationResult } from '../types.js'
+import { assertSafeCalendarUrl } from '../security/ssrf.js'
 
 /** Número máximo de Bitcoin attestations a verificar por proof. */
 export const MAX_BITCOIN_ATTESTATIONS = 10
@@ -78,7 +79,8 @@ export async function orchestrateStamp(
   networkLayer: ResilientNetworkLayer,
   logger?: Logger,
   signal?: AbortSignal,
-  minimumSuccessfulSubmissions = 2
+  minimumSuccessfulSubmissions = 2,
+  allowPrivateCalendars = false,
 ): Promise<Buffer> {
   if (calendars.length === 0) {
     throw new ValidationError('at least one calendar is required to stamp')
@@ -91,7 +93,9 @@ export async function orchestrateStamp(
       `minimumSuccessfulSubmissions (${minimumSuccessfulSubmissions}) cannot exceed the number of calendars (${calendars.length})`
     )
   }
-  for (const url of calendars) assertHttpUrl(url, 'calendar')
+  await Promise.all(
+    calendars.map(url => assertSafeCalendarUrl(url, { allowPrivate: allowPrivateCalendars }))
+  )
 
   const digest = validateHash(hash)
   logger?.info(`Starting stamp for ${Buffer.from(digest).toString('hex')}`)
