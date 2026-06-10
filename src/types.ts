@@ -2,6 +2,8 @@
  * Type definitions for the OpenTimestamps Client SDK
  */
 
+import { DEFAULT_CALENDAR_URLS } from '@otskit/core'
+
 /** Logger interface for observability */
 export interface Logger {
   debug(message: string, ...args: unknown[]): void
@@ -121,13 +123,8 @@ export type VerificationResult =
 export const isVerified = (r: VerificationResult): r is VerificationSuccess =>
   r.status === 'verified'
 
-/** Default calendar servers */
-export const DEFAULT_CALENDARS = [
-  'https://alice.btc.calendar.opentimestamps.org',
-  'https://bob.btc.calendar.opentimestamps.org',
-  'https://finney.calendar.eternitywall.com',
-  'https://btc.calendar.catallaxy.com',
-]
+/** Default calendar servers. Sourced from @otskit/core (single source of truth). */
+export const DEFAULT_CALENDARS: string[] = [...DEFAULT_CALENDAR_URLS]
 
 /** Default resilience configuration */
 export const DEFAULT_RESILIENCE: ResilienceOptions = {

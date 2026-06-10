@@ -15,7 +15,7 @@ const DIGEST = new Uint8Array(32).fill(0xaa)
 const calendarResponseBytes = (msg: Uint8Array): Uint8Array => {
   const ts = new Timestamp(msg)
   // El sub-stamp necesita al menos una attestation para ser serializable
-  ts.add(new OpSHA256()).attestations.push(makePending(CAL))
+  ts.add(new OpSHA256()).addAttestation(makePending(CAL))
   const sc = new StreamSerializationContext()
   ts.serialize(sc)
   return sc.getOutput()

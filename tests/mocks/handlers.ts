@@ -36,7 +36,7 @@ function serializeTimestamp(ts: Timestamp): Uint8Array {
 /** Respuesta de calendario PENDING (aún no confirmado) commit-eada a `commitment`. */
 function pendingResponseFor(commitment: Uint8Array, uri: string): Uint8Array {
   const ts = new Timestamp(commitment)
-  ts.attestations.push(makePending(uri))
+  ts.addAttestation(makePending(uri))
   return serializeTimestamp(ts)
 }
 
@@ -44,7 +44,7 @@ function pendingResponseFor(commitment: Uint8Array, uri: string): Uint8Array {
 export function bitcoinResponseFor(commitment: Uint8Array, height: number): Uint8Array {
   const ts = new Timestamp(commitment)
   const leaf = ts.add(new OpSHA256())
-  leaf.attestations.push(makeBitcoin(height))
+  leaf.addAttestation(makeBitcoin(height))
   return serializeTimestamp(ts)
 }
 
@@ -61,8 +61,8 @@ const otsResponse = (bytes: Uint8Array) =>
 const FILE_DIGEST = new Uint8Array(32).fill(0xaa)
 const incomplete = DetachedTimestampFile.fromHash(new OpSHA256(), FILE_DIGEST)
 const incompleteLeaf = incomplete.timestamp.add(new OpSHA256())
-incompleteLeaf.attestations.push(makePending('https://alice.btc.calendar.opentimestamps.org'))
-incompleteLeaf.attestations.push(makePending('https://bob.btc.calendar.opentimestamps.org'))
+incompleteLeaf.addAttestation(makePending('https://alice.btc.calendar.opentimestamps.org'))
+incompleteLeaf.addAttestation(makePending('https://bob.btc.calendar.opentimestamps.org'))
 export const FAKE_INCOMPLETE_OTS: Uint8Array = incomplete.serializeToBytes()
 /** Commitment del sub-stamp pending (lo que `upgrade` envía como /timestamp/{hex}). */
 export const INCOMPLETE_COMMITMENT: Uint8Array = incompleteLeaf.getDigest()
@@ -72,7 +72,7 @@ const BITCOIN_HEIGHT = 123456
 const BLOCK_TIME = 1609459200
 const complete = DetachedTimestampFile.fromHash(new OpSHA256(), FILE_DIGEST)
 const completeLeaf = complete.timestamp.add(new OpSHA256())
-completeLeaf.attestations.push(makeBitcoin(BITCOIN_HEIGHT))
+completeLeaf.addAttestation(makeBitcoin(BITCOIN_HEIGHT))
 export const FAKE_COMPLETE_OTS: Uint8Array = complete.serializeToBytes()
 // merkleroot del bloque = digest de la hoja Bitcoin INVERTIDO (big-endian)
 const COMPLETE_MERKLEROOT = bytesToHex(Uint8Array.from(completeLeaf.getDigest()).reverse())

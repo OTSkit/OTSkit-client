@@ -362,7 +362,7 @@ describe('orchestrateUpgrade — logger?.warn con calendario no whitelisted', ()
     const warn = vi.fn()
     const logger = { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() }
     const dtf = DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(32).fill(0x11))
-    dtf.timestamp.add(new OpSHA256()).attestations.push(makePending('https://evil.example.com'))
+    dtf.timestamp.add(new OpSHA256()).addAttestation(makePending('https://evil.example.com'))
     const layer = new ResilientNetworkLayer(DEFAULT_RESILIENCE)
     await expect(
       orchestrateUpgrade(Buffer.from(dtf.serializeToBytes()), [], layer, logger)
@@ -516,8 +516,8 @@ describe('orchestrateUpgrade — ramas adicionales', () => {
     // timestamp con unknown + pending: unknown se salta, pending se consulta
     const dtf2 = DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(32).fill(0x33))
     const sub = dtf2.timestamp.add(new OpSHA256())
-    sub.attestations.push(makeUnknown(new Uint8Array([0xde, 0xad, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]), new Uint8Array(0)))
-    sub.attestations.push(makePending('https://alice.btc.calendar.opentimestamps.org'))
+    sub.addAttestation(makeUnknown(new Uint8Array([0xde, 0xad, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]), new Uint8Array(0)))
+    sub.addAttestation(makePending('https://alice.btc.calendar.opentimestamps.org'))
     const layer = new ResilientNetworkLayer(DEFAULT_RESILIENCE)
     const { orchestrateUpgrade: oUp } = await import('../../src/core/orchestration.js')
     // alice devuelve pending (por defecto) → nada cambia → UpgradeError

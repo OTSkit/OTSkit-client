@@ -1,7 +1,13 @@
 /**
  * Cliente de un calendario remoto OpenTimestamps (protocolo OTS real).
  */
-import { Timestamp, StreamDeserializationContext, bytesToHex } from '@otskit/core'
+import {
+  Timestamp,
+  StreamDeserializationContext,
+  bytesToHex,
+  TRUSTED_CALENDAR_WHITELIST_PATTERNS,
+  DEFAULT_AGGREGATOR_URLS,
+} from '@otskit/core'
 import { ResilientNetworkLayer } from './resilience.js'
 import { Logger } from '../types.js'
 import { CommitmentNotFoundError, CalendarResponseTooLargeError, NetworkError } from '../errors.js'
@@ -184,18 +190,14 @@ export class UrlWhitelist {
   }
 }
 
-/** Calendarios de confianza por defecto para verificacion/upgrade. */
-export const DEFAULT_CALENDAR_WHITELIST = new UrlWhitelist([
-  'https://*.calendar.opentimestamps.org', // Peter Todd
-  'https://*.btc.calendar.opentimestamps.org', // Peter Todd Bitcoin calendars
-  'https://*.calendar.eternitywall.com', // Eternity Wall
-  'https://*.calendar.catallaxy.com', // Catallaxy
-])
+/**
+ * Default trusted calendars for verification/upgrade.
+ * Patterns sourced from @otskit/core (single source of truth).
+ */
+export const DEFAULT_CALENDAR_WHITELIST = new UrlWhitelist([...TRUSTED_CALENDAR_WHITELIST_PATTERNS])
 
-/** Agregadores por defecto a los que enviar digests al sellar. */
-export const DEFAULT_AGGREGATORS: readonly string[] = [
-  'https://a.pool.opentimestamps.org',
-  'https://b.pool.opentimestamps.org',
-  'https://a.pool.eternitywall.com',
-  'https://ots.btc.catallaxy.com',
-]
+/**
+ * Default aggregators to submit digests to when stamping.
+ * Sourced from @otskit/core (single source of truth).
+ */
+export const DEFAULT_AGGREGATORS: readonly string[] = [...DEFAULT_AGGREGATOR_URLS]

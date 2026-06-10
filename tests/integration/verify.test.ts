@@ -62,9 +62,9 @@ describe('verify() - Integration', () => {
     // inexistente (404); la segunda es válida. verify debe devolver válido por la segunda.
     const dtf = DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(32).fill(0xcc))
     const leafBad = dtf.timestamp.add(new OpSHA256()) // 32 bytes
-    leafBad.attestations.push(makeBitcoin(111111))
+    leafBad.addAttestation(makeBitcoin(111111))
     const leafGood = dtf.timestamp.add(new OpAppend(new Uint8Array([0x01]))).add(new OpSHA256()) // 32 bytes
-    leafGood.attestations.push(makeBitcoin(222222))
+    leafGood.addAttestation(makeBitcoin(222222))
     const goodHash = 'cd'.repeat(32)
     const goodMerkleroot = bytesToHex(Uint8Array.from(leafGood.getDigest()).reverse())
     server.use(
@@ -88,7 +88,7 @@ describe('verify() - Integration', () => {
     const { makeLitecoin } = await import('@otskit/core')
     const dtf = DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(32).fill(0xdd))
     const leaf = dtf.timestamp.add(new OpSHA256())
-    leaf.attestations.push(makeLitecoin(800000))
+    leaf.addAttestation(makeLitecoin(800000))
     const result = await new OpenTimestampsClient().verify(Buffer.from(dtf.serializeToBytes()))
     expect(result.status).toBe('pending')
     if (result.status === 'pending') expect(result.reason).toContain('Litecoin')

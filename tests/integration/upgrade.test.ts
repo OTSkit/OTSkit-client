@@ -77,7 +77,7 @@ describe('upgrade() - Integration', () => {
     // Un .ots cuyo único pending apunta a un calendario NO whitelisted: la rama
     // `!DEFAULT_CALENDAR_WHITELIST.contains(uri)` se ejercita; no se consulta nada → UpgradeError.
     const dtf = DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(32).fill(0x11))
-    dtf.timestamp.add(new OpSHA256()).attestations.push(makePending('https://evil.example.com'))
+    dtf.timestamp.add(new OpSHA256()).addAttestation(makePending('https://evil.example.com'))
     let queried = false
     server.use(
       http.get('https://evil.example.com/timestamp/:hex', () => {

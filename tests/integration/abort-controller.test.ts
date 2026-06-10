@@ -17,7 +17,7 @@ const localClient = (options: Omit<ClientOptions, 'allowPrivateCalendars'> = {})
 function pendingOtsResponse(body: ArrayBuffer): ArrayBuffer {
   const digest = new Uint8Array(body)
   const ts = new Timestamp(digest)
-  ts.attestations.push(makePending('https://a.pool.opentimestamps.org'))
+  ts.addAttestation(makePending('https://a.pool.opentimestamps.org'))
   const sc = new StreamSerializationContext()
   ts.serialize(sc)
   const out = sc.getOutput()
