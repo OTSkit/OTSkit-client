@@ -1,6 +1,6 @@
 {
   "name": "@otskit/client",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Official client SDK for OpenTimestamps calendars with resilience patterns",
   "author": "alexalves87",
   "license": "MIT",

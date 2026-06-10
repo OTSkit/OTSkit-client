@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/OTSkit/OTSkit-client/compare/v0.3.0...v0.4.0) (2026-06-10)
+
+
+### Features
+
+* derive calendar data from @otskit/core and depend on it at runtime ([1135364](https://github.com/OTSkit/OTSkit-client/commit/11353648cc8d83d4ecd701e5ec17de1a4d529d06))
+
 # [0.3.0](https://github.com/OTSkit/OTSkit-client/compare/v0.2.0...v0.3.0) (2026-06-07)
 
 
