@@ -1,5 +1,5 @@
 /**
- * Cliente de un calendario remoto OpenTimestamps (protocolo OTS real).
+ * Remote OpenTimestamps calendar client (real OTS protocol).
  */
 import {
   Timestamp,
@@ -12,10 +12,10 @@ import { ResilientNetworkLayer } from './resilience.js'
 import { Logger } from '../types.js'
 import { CommitmentNotFoundError, CalendarResponseTooLargeError, NetworkError } from '../errors.js'
 
-/** Limite de tamano de la respuesta de un calendario (defensa DoS). */
+/** Maximum response size from a calendar server (DoS defense). */
 export const MAX_CALENDAR_RESPONSE_SIZE = 10000
 
-/** Valida un commitment en la frontera (fail-closed): Uint8Array de longitud razonable. */
+/** Validates a commitment at the boundary (fail-closed): Uint8Array of reasonable length. */
 function assertCommitment(bytes: Uint8Array): void {
   if (!(bytes instanceof Uint8Array)) {
     throw new TypeError('commitment must be a Uint8Array')
@@ -30,12 +30,12 @@ const OTS_HEADERS: Record<string, string> = {
   'Content-Type': 'application/x-www-form-urlencoded',
 }
 
-/** Une la URL base del calendario con un path absoluto, sin duplicar la barra. */
+/** Joins the calendar base URL with an absolute path, avoiding double slashes. */
 function joinUrl(base: string, path: string): string {
   return base.replace(/\/+$/, '') + path
 }
 
-/** Interfaz con un servidor de calendario remoto. */
+/** Interface to a remote calendar server. */
 export class CalendarClient {
   constructor(
     private readonly url: string,
@@ -43,7 +43,7 @@ export class CalendarClient {
     private readonly logger?: Logger,
   ) {}
 
-  /** Envia un digest al calendario y devuelve el Timestamp que lo commit-ea. */
+  /** Submits a digest to the calendar and returns the Timestamp that commits to it. */
   async submit(digest: Uint8Array, signal?: AbortSignal): Promise<Timestamp> {
     assertCommitment(digest)
     this.logger?.debug(`Submitting digest to ${this.url}/digest`)
@@ -55,7 +55,7 @@ export class CalendarClient {
     return this.#parseTimestamp(response.data, digest)
   }
 
-  /** Pregunta al calendario si tiene un Timestamp mas completo para `commitment` (upgrade). */
+  /** Asks the calendar for a more complete Timestamp for `commitment` (upgrade). */
   async getTimestamp(commitment: Uint8Array, signal?: AbortSignal): Promise<Timestamp> {
     assertCommitment(commitment)
     const path = `/timestamp/${bytesToHex(commitment)}`
@@ -78,7 +78,7 @@ export class CalendarClient {
     return this.#parseTimestamp(response.data, commitment)
   }
 
-  /** Deserializa la respuesta del calendario como un Timestamp commit-eado a `commitment`. */
+  /** Deserializes the calendar response as a Timestamp committed to `commitment`. */
   #parseTimestamp(data: Uint8Array, commitment: Uint8Array): Timestamp {
     if (data.length > MAX_CALENDAR_RESPONSE_SIZE) {
       throw new CalendarResponseTooLargeError(
@@ -87,7 +87,7 @@ export class CalendarClient {
     }
     const ctx = new StreamDeserializationContext(data)
     const timestamp = Timestamp.deserialize(ctx, commitment)
-    ctx.assertEof() // fail-closed: no se admiten bytes colgando tras el arbol
+    ctx.assertEof() // fail-closed: no trailing bytes are allowed after the tree
     return timestamp
   }
 }
@@ -122,7 +122,7 @@ function parseWhitelistPattern(raw: string): WhitelistPattern | undefined {
     hostname,
     port: parsed.port,
     pathname: parsed.pathname,
-    wildcardSuffix,
+    ...(wildcardSuffix !== undefined ? { wildcardSuffix } : {}),
   }
 }
 
@@ -136,7 +136,7 @@ function hostnameMatchesPattern(hostname: string, pattern: WhitelistPattern): bo
   return label.length > 0 && !label.includes('.')
 }
 
-/** Lista blanca de URLs de calendario de confianza. */
+/** Allowlist of trusted calendar URLs. */
 export class UrlWhitelist {
   readonly #patterns = new Map<string, WhitelistPattern>()
 
@@ -146,21 +146,27 @@ export class UrlWhitelist {
     }
   }
 
-  /** Anade un patron; si no trae esquema, se anaden las variantes http y https. */
+  /**
+   * Adds a pattern. If the URL has no scheme, both http:// and https:// variants are added.
+   * Throws TypeError if the pattern is not a valid string or is structurally invalid.
+   */
   add(url: string): void {
     if (typeof url !== 'string') {
       throw new TypeError('UrlWhitelist: URL must be a string')
     }
     if (url.startsWith('http://') || url.startsWith('https://')) {
       const pattern = parseWhitelistPattern(url)
-      if (pattern !== undefined) this.#patterns.set(url, pattern)
+      if (pattern === undefined) {
+        throw new TypeError(`UrlWhitelist: invalid or unsupported pattern: "${url}"`)
+      }
+      this.#patterns.set(url, pattern)
     } else {
       this.add('http://' + url)
       this.add('https://' + url)
     }
   }
 
-  /** Verdadero si `url` casa con algun patron de la whitelist. */
+  /** Returns true if `url` matches any pattern in the allowlist. */
   contains(url: string): boolean {
     let parsed: URL
     try {

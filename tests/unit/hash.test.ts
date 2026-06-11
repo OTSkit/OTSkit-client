@@ -23,7 +23,7 @@ describe('hashBuffer', () => {
 
   it('returns correct hash for empty input', () => {
     const result = hashBuffer(Buffer.alloc(0))
-    // SHA-256 del string vacío
+    // SHA-256 of the empty string
     expect(result.toString('hex')).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
   })
 })

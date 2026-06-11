@@ -1,5 +1,5 @@
 /**
- * Cliente del explorador Esplora/Blockstream para verificación en cadena.
+ * Esplora/Blockstream explorer client for on-chain verification.
  */
 import { verifyAgainstBlockheader, VerificationError } from '@otskit/core'
 import type { Attestation, BlockHeader } from '@otskit/core'
@@ -7,26 +7,26 @@ import { ResilientNetworkLayer } from './resilience.js'
 import { Logger } from '../types.js'
 import { EsploraResponseError, ValidationError } from '../errors.js'
 
-/** Explorador Esplora público por defecto (Bitcoin mainnet). */
+/** Default public Esplora explorer (Bitcoin mainnet). */
 export const PUBLIC_ESPLORA_URL = 'https://blockstream.info/api'
 
-/** Límite de tamaño de una respuesta de Esplora (defensa DoS). Una cabecera JSON ronda los cientos de bytes. */
+/** Maximum size of an Esplora response (DoS defense). A JSON block header is a few hundred bytes. */
 export const MAX_ESPLORA_RESPONSE_SIZE = 100_000
 
-/** Hash de bloque / merkleroot: hex de 64 caracteres. */
+/** Block hash / merkle root: 64-character hex string. */
 const HEX64_RE = /^[0-9a-f]{64}$/i
 
 export interface EsploraClientOptions {
-  /** URL base del explorador (por defecto Blockstream). Útil para apuntar a un Esplora de Litecoin. */
+  /** Base URL of the explorer (defaults to Blockstream). Useful for pointing to a Litecoin Esplora. */
   url?: string
   logger?: Logger
 }
 
-/** Cliente de un explorador Esplora remoto. */
+/** Client for a remote Esplora explorer. */
 export class EsploraClient {
   readonly #url: string
   readonly #networkLayer: ResilientNetworkLayer
-  readonly #logger?: Logger
+  readonly #logger: Logger | undefined
 
   constructor(networkLayer: ResilientNetworkLayer, options: EsploraClientOptions = {}) {
     const raw = options.url ?? PUBLIC_ESPLORA_URL
@@ -44,7 +44,7 @@ export class EsploraClient {
     this.#logger = options.logger
   }
 
-  /** Devuelve el hash (hex 64, minúsculas) del bloque a la altura dada. */
+  /** Returns the block hash (64-char hex, lowercase) at the given height. */
   async blockHash(height: number, signal?: AbortSignal): Promise<string> {
     if (!Number.isSafeInteger(height) || height < 0) {
       throw new ValidationError(`block height must be a non-negative safe integer; got ${height}`)
@@ -62,7 +62,7 @@ export class EsploraClient {
     return text.toLowerCase()
   }
 
-  /** Devuelve la cabecera del bloque (merkleroot + time) dado su hash. */
+  /** Returns the block header (merkle root + timestamp) for the given hash. */
   async block(hash: string, signal?: AbortSignal): Promise<BlockHeader> {
     if (typeof hash !== 'string' || !HEX64_RE.test(hash)) {
       throw new ValidationError('block hash must be a 64-char hex string')
@@ -80,7 +80,7 @@ export class EsploraClient {
     } catch (err) {
       throw new EsploraResponseError('esplora returned a non-JSON block response', {
         /* v8 ignore next */
-        cause: err instanceof Error ? err : undefined,
+        ...(err instanceof Error ? { cause: err } : {}),
       })
     }
     if (typeof body !== 'object' || body === null) {
@@ -96,33 +96,33 @@ export class EsploraClient {
     return { merkleroot, time }
   }
 
-  /** Decodifica el cuerpo a texto aplicando el límite de tamaño (fail-closed). */
+  /** Decodes the response body as text, enforcing the size limit (fail-closed). */
   #decode(data: Uint8Array): string {
     if (data.length > MAX_ESPLORA_RESPONSE_SIZE) {
       throw new EsploraResponseError(
         `esplora response of ${data.length} bytes exceeds limit ${MAX_ESPLORA_RESPONSE_SIZE}`,
       )
     }
-    // fatal:true — la API de Esplora es ASCII puro; bytes no-UTF-8 indican
-    // respuesta corrupta o servidor comprometido. Fail-closed explícito.
+    // fatal: true — the Esplora API is pure ASCII; non-UTF-8 bytes indicate a corrupted
+    // or compromised response. Explicit fail-closed behavior.
     try {
       return new TextDecoder('utf-8', { fatal: true }).decode(data)
     } catch (cause) {
       throw new EsploraResponseError('esplora response contains invalid UTF-8 bytes', {
-        cause: cause instanceof Error ? cause : undefined,
+        ...(cause instanceof Error ? { cause } : {}),
       })
     }
   }
 }
 
 /**
- * Verifica una atestación Bitcoin/Litecoin contra la cabecera del bloque correspondiente.
+ * Verifies a Bitcoin/Litecoin attestation against the corresponding block header.
  *
- * `digest` es el commitment final del árbol del timestamp en el punto de la atestación
- * (32 bytes, debe ser el merkleroot del bloque). `explorer` debe apuntar a la cadena de la
- * atestación (Blockstream para Bitcoin; un Esplora de Litecoin para Litecoin). Devuelve el
- * tiempo del bloque (epoch s) en éxito; lanza `VerificationError` si no coincide o si la
- * atestación no es verificable en cadena (`pending`/`unknown`). Fail-closed.
+ * `digest` is the final tree commitment at the attestation point (32 bytes, must equal the
+ * block's merkle root). `explorer` must point to the correct chain (Blockstream for Bitcoin;
+ * a Litecoin Esplora for Litecoin). Returns the block time (epoch seconds) on success;
+ * throws `VerificationError` if the digest does not match or the attestation is not
+ * on-chain verifiable (`pending`/`unknown`). Fail-closed.
  */
 export async function verifyTimestampAttestation(
   digest: Uint8Array,

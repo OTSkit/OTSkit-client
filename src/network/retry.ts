@@ -52,7 +52,8 @@ function calculateDelay(
 }
 
 /**
- * Sleep for specified milliseconds
+ * Sleep for specified milliseconds, respecting an optional AbortSignal.
+ * The abort listener is always removed to avoid a permanent listener leak on long-lived signals.
  */
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -62,12 +63,17 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
       return
     }
 
-    const timeout = setTimeout(resolve, ms)
-
-    signal?.addEventListener('abort', () => {
+    const onAbort = (): void => {
       clearTimeout(timeout)
       reject(new Error('Aborted'))
-    })
+    }
+
+    const timeout = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+
+    signal?.addEventListener('abort', onAbort, { once: true })
   })
 }
 

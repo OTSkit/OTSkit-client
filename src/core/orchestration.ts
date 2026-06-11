@@ -1,11 +1,13 @@
 /**
- * Orquestación canónica de OpenTimestamps: stamp / upgrade / verify sobre el core canónico,
- * el CalendarClient (protocolo OTS real) y el EsploraClient. Fail-closed en todo.
+ * Canonical OpenTimestamps orchestration: stamp / upgrade / verify on top of the canonical
+ * core, the CalendarClient (real OTS protocol), and the EsploraClient. Fail-closed throughout.
  */
 import {
   DetachedTimestampFile,
   OpSHA256,
   OpAppend,
+  OpSHA1,
+  OpRIPEMD160,
   makeMerkleTree,
 } from '@otskit/core'
 import { ResilientNetworkLayer } from '../network/resilience.js'
@@ -16,10 +18,10 @@ import { ValidationError, StampError, UpgradeError, CommitmentNotFoundError, Net
 import { Logger, VerificationResult } from '../types.js'
 import { assertSafeCalendarUrl } from '../security/ssrf.js'
 
-/** Número máximo de Bitcoin attestations a verificar por proof. */
+/** Maximum number of Bitcoin attestations to verify per proof. */
 export const MAX_BITCOIN_ATTESTATIONS = 10
 
-/** Valida un hash SHA-256 y lo devuelve como Uint8Array de 32 bytes. */
+/** Validates a SHA-256 hash and returns it as a 32-byte Uint8Array. */
 function validateHash(hash: Buffer | string): Uint8Array {
   if (typeof hash === 'string') {
     const hex = hash.trim().toLowerCase()
@@ -34,7 +36,7 @@ function validateHash(hash: Buffer | string): Uint8Array {
   return Uint8Array.from(hash)
 }
 
-/** Nonce criptográficamente seguro (sin fallback a Math.random). */
+/** Cryptographically secure nonce (no Math.random fallback). */
 function secureNonce(n: number): Uint8Array {
   const bytes = new Uint8Array(n)
   /* c8 ignore start */
@@ -46,20 +48,20 @@ function secureNonce(n: number): Uint8Array {
   return bytes
 }
 
-/** Comparación byte a byte en tiempo constante — para hashes que provienen del usuario. */
+/** Constant-time byte comparison — used for user-supplied hashes. */
 function timingSafeEq(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false
   return timingSafeEqual(a, b)
 }
 
-/** Comparación rápida para datos públicos donde el timing no importa. */
+/** Fast byte comparison for public data where timing does not matter. */
 const bytesEqFast = (a: Uint8Array, b: Uint8Array): boolean =>
   Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0
 
 
 /**
- * stamp: construye el árbol (digest → append(nonce) → SHA256 → merkle root), lo envía a los
- * calendarios y fusiona las respuestas. Exige ≥ M éxitos. Devuelve el `.ots` canónico.
+ * stamp: builds the tree (digest → append(nonce) → SHA256 → merkle root), submits it to
+ * calendars, and merges the responses. Requires >= M successes. Returns the canonical `.ots`.
  */
 export async function orchestrateStamp(
   hash: Buffer | string,
@@ -125,9 +127,9 @@ export async function orchestrateStamp(
 }
 
 /**
- * upgrade: consulta los calendarios de las attestations pending (validadas contra la whitelist),
- * fusiona los Timestamp devueltos y devuelve la prueba. Lanza UpgradeError si nada cambió y la
- * prueba no estaba ya completa. Sin softFail.
+ * upgrade: queries the calendars referenced by pending attestations (validated against the
+ * allowlist), merges the returned Timestamps, and returns the updated proof. Throws UpgradeError
+ * if nothing changed and the proof was not already complete. No soft-fail.
  */
 export async function orchestrateUpgrade(
   incompleteProof: Buffer,
@@ -142,7 +144,7 @@ export async function orchestrateUpgrade(
   } catch (error) {
     throw new ValidationError('Invalid .ots proof format', {
       /* v8 ignore next */
-      cause: error instanceof Error ? error : undefined,
+      ...(error instanceof Error ? { cause: error } : {}),
     })
   }
 
@@ -187,8 +189,8 @@ export async function orchestrateUpgrade(
 }
 
 /**
- * verify: localiza la attestation Bitcoin y la verifica en cadena (Esplora).
- * Devuelve un union discriminado para que el caller pueda hacer narrowing exhaustivo.
+ * verify: locates the Bitcoin attestation and verifies it on-chain (Esplora).
+ * Returns a discriminated union so callers can do exhaustive narrowing.
  */
 export async function orchestrateVerify(
   proof: Buffer,
@@ -197,14 +199,22 @@ export async function orchestrateVerify(
   logger?: Logger,
   signal?: AbortSignal,
 ): Promise<VerificationResult> {
-  // .ots corrupto → lanza ValidationError (igual que orchestrateUpgrade, coherencia de API)
+  // Corrupt .ots → throw ValidationError (consistent with orchestrateUpgrade API)
   let detached: DetachedTimestampFile
   try {
     detached = DetachedTimestampFile.deserialize(new Uint8Array(proof))
   } catch (cause) {
     throw new ValidationError('Invalid .ots proof format', {
-      cause: cause instanceof Error ? cause : undefined,
+      ...(cause instanceof Error ? { cause } : {}),
     })
+  }
+
+  if (detached.fileHashOp instanceof OpSHA1 || detached.fileHashOp instanceof OpRIPEMD160) {
+    return {
+      status: 'invalid',
+      reason: `This proof uses ${detached.fileHashOp.tagName} (a weak hash algorithm). ` +
+              `Re-stamp the original file with SHA-256 to get a verifiable proof.`,
+    }
   }
 
   if (originalDataHash !== undefined) {
@@ -214,7 +224,7 @@ export async function orchestrateVerify(
     } catch (err) {
       throw new ValidationError(
         err instanceof Error ? err.message : 'Invalid hash format',
-        { cause: err instanceof Error ? err : undefined },
+        { ...(err instanceof Error ? { cause: err } : {}) },
       )
     }
     if (!timingSafeEq(expected, detached.fileDigest())) {
@@ -226,7 +236,7 @@ export async function orchestrateVerify(
     .allAttestations()
     .filter(({ attestation }) => attestation.kind === 'bitcoin')
 
-  // Deduplicar por altura: dos attestations al mismo bloque harían las mismas llamadas HTTP.
+  // Deduplicate by height: two attestations at the same block would make identical HTTP calls.
   const seenHeights = new Set<number>()
   const deduped = allBitcoin.filter(({ attestation }) => {
     if (attestation.kind !== 'bitcoin') return false
@@ -238,7 +248,7 @@ export async function orchestrateVerify(
     return true
   })
 
-  // Límite contra proofs artesanales maliciosos que intenten provocar DoS.
+  // Cap against crafted proofs that could trigger a DoS via excessive HTTP calls.
   const bitcoinAtts = deduped.slice(0, MAX_BITCOIN_ATTESTATIONS)
   if (deduped.length > MAX_BITCOIN_ATTESTATIONS) {
     logger?.warn(
@@ -262,8 +272,8 @@ export async function orchestrateVerify(
   let lastNetworkError: string | undefined
   let lastCryptoError: string | undefined
 
-  // Probar TODAS las attestations Bitcoin: válido si CUALQUIERA verifica. El merkleroot de
-  // Bitcoin es big-endian, así que invertimos el digest del árbol antes de verificar.
+  // Try ALL Bitcoin attestations: valid if ANY of them verifies. Bitcoin's merkle root is
+  // big-endian, so we reverse the tree digest before verifying.
   for (const { msg, attestation } of bitcoinAtts) {
     /* v8 ignore next */
     if (attestation.kind !== 'bitcoin') continue

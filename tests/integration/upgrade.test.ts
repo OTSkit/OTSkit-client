@@ -1,4 +1,4 @@
-/** Integration tests de upgrade() — protocolo OTS canónico. */
+/** Integration tests for upgrade() — canonical OTS protocol. */
 import { describe, it, expect } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../mocks/server.js'
@@ -27,23 +27,23 @@ const completeFromCalendar = (url: string) =>
 const client = () => new OpenTimestampsClient({ calendars: [ALICE, BOB] })
 
 describe('upgrade() - Integration', () => {
-  it('actualiza cuando un calendario confirma (Bitcoin)', async () => {
+  it('upgrades when a calendar confirms (Bitcoin)', async () => {
     server.use(completeFromCalendar(ALICE))
     const upgraded = await client().upgrade(Buffer.from(FAKE_INCOMPLETE_OTS))
     expect(upgraded).toBeInstanceOf(Buffer)
-    expect(Buffer.compare(upgraded, Buffer.from(FAKE_INCOMPLETE_OTS))).not.toBe(0) // cambió
+    expect(Buffer.compare(upgraded, Buffer.from(FAKE_INCOMPLETE_OTS))).not.toBe(0) // proof changed
   })
 
-  it('UpgradeError cuando ningún calendario ha confirmado (todos pending por defecto)', async () => {
+  it('throws UpgradeError when no calendar has confirmed (all pending by default)', async () => {
     await expect(client().upgrade(Buffer.from(FAKE_INCOMPLETE_OTS))).rejects.toThrow(UpgradeError)
   })
 
-  it('no consulta y devuelve la misma prueba si ya está completa', async () => {
+  it('returns the same proof unchanged when already complete', async () => {
     const result = await client().upgrade(Buffer.from(FAKE_COMPLETE_OTS))
     expect(result.equals(Buffer.from(FAKE_COMPLETE_OTS))).toBe(true)
   })
 
-  it('UpgradeError cuando todos los calendarios fallan (503)', async () => {
+  it('throws UpgradeError when all calendars fail with 503', async () => {
     server.use(
       http.get(`${ALICE}/timestamp/:hex`, () => new HttpResponse(null, { status: 503 })),
       http.get(`${BOB}/timestamp/:hex`, () => new HttpResponse(null, { status: 503 }))
@@ -55,7 +55,7 @@ describe('upgrade() - Integration', () => {
     ).rejects.toThrow(UpgradeError)
   })
 
-  it('ignora la respuesta corrupta de un calendario y usa la válida del otro', async () => {
+  it('ignores a corrupt calendar response and uses the valid one from the other calendar', async () => {
     server.use(
       http.get(`${ALICE}/timestamp/:hex`, () =>
         HttpResponse.arrayBuffer(new Uint8Array([0xff, 0xff, 0xff]).buffer, {
@@ -69,13 +69,13 @@ describe('upgrade() - Integration', () => {
     expect(upgraded).toBeInstanceOf(Buffer)
   })
 
-  it('ValidationError para un .ots con formato inválido', async () => {
+  it('throws ValidationError for an invalid .ots format', async () => {
     await expect(client().upgrade(Buffer.from('invalid binary data'))).rejects.toThrow(ValidationError)
   })
 
-  it('ignora un pending fuera de la whitelist (no lo consulta) → UpgradeError', async () => {
-    // Un .ots cuyo único pending apunta a un calendario NO whitelisted: la rama
-    // `!DEFAULT_CALENDAR_WHITELIST.contains(uri)` se ejercita; no se consulta nada → UpgradeError.
+  it('ignores a pending attestation outside the allowlist (does not query it) → UpgradeError', async () => {
+    // A .ots whose only pending attestation points to a non-allowlisted calendar:
+    // the `!DEFAULT_CALENDAR_WHITELIST.contains(uri)` branch fires; nothing is queried → UpgradeError.
     const dtf = DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(32).fill(0x11))
     dtf.timestamp.add(new OpSHA256()).addAttestation(makePending('https://evil.example.com'))
     let queried = false
@@ -86,11 +86,11 @@ describe('upgrade() - Integration', () => {
       })
     )
     await expect(client().upgrade(Buffer.from(dtf.serializeToBytes()))).rejects.toThrow(UpgradeError)
-    expect(queried).toBe(false) // nunca se consultó el calendario no whitelisted
+    expect(queried).toBe(false) // the non-allowlisted calendar was never queried
   })
 
-  it('CommitmentNotFoundError (404) se ignora silenciosamente; si otro confirma, pasa', async () => {
-    // ALICE devuelve 404 (CommitmentNotFoundError), BOB confirma con Bitcoin.
+  it('silently ignores CommitmentNotFoundError (404); succeeds when another calendar confirms', async () => {
+    // ALICE returns 404 (CommitmentNotFoundError); BOB confirms with Bitcoin.
     server.use(
       http.get(`${ALICE}/timestamp/:hex`, () => new HttpResponse(null, { status: 404 })),
       completeFromCalendar(BOB)

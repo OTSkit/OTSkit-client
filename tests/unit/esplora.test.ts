@@ -10,13 +10,13 @@ import { EsploraResponseError, NetworkError, SizeLimitExceededError, ValidationE
 import { ResilientNetworkLayer } from '../../src/network/resilience.js'
 import { DEFAULT_RESILIENCE } from '../../src/types.js'
 
-const MERKLEROOT = 'aa'.repeat(32) // 64 hex; coincide con un digest de 32 bytes a 0xaa
+const MERKLEROOT = 'aa'.repeat(32) // 64 hex; matches a 32-byte digest of 0xaa
 const DIGEST = new Uint8Array(32).fill(0xaa)
 const BLOCKHASH = 'bb'.repeat(32)
 const HEIGHT = 700000
 const TIME = 1700000000
 
-// Capa de red sin reintentos: cada test ejerce un único intento, circuit-breaker aislado por instancia.
+// Network layer with retries disabled: each test exercises exactly one attempt with an isolated circuit breaker.
 const newLayer = () =>
   new ResilientNetworkLayer({
     ...DEFAULT_RESILIENCE,
@@ -25,7 +25,7 @@ const newLayer = () =>
 const newClient = () => new EsploraClient(newLayer())
 
 describe('EsploraClient.blockHash', () => {
-  it('GET /block-height/{height} → hash en minúsculas', async () => {
+  it('GET /block-height/{height} → lowercase hash', async () => {
     server.use(
       http.get(`${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`, () => HttpResponse.text(BLOCKHASH))
     )
@@ -33,20 +33,20 @@ describe('EsploraClient.blockHash', () => {
   })
 
   it.each([-1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])(
-    'rechaza height inválido (%p) con ValidationError, sin tocar la red',
+    'rejects invalid height (%p) with ValidationError without touching the network',
     async (h) => {
       await expect(newClient().blockHash(h as number)).rejects.toBeInstanceOf(ValidationError)
     }
   )
 
-  it('respuesta que no es hash de 64 → EsploraResponseError', async () => {
+  it('response that is not a 64-char hash → EsploraResponseError', async () => {
     server.use(
       http.get(`${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`, () => HttpResponse.text('nope'))
     )
     await expect(newClient().blockHash(HEIGHT)).rejects.toBeInstanceOf(EsploraResponseError)
   })
 
-  it('respuesta mayor que el límite → SizeLimitExceededError (detectado en transporte)', async () => {
+  it('response larger than the limit → SizeLimitExceededError (detected in transport)', async () => {
     server.use(
       http.get(`${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`, () =>
         HttpResponse.text('x'.repeat(MAX_ESPLORA_RESPONSE_SIZE + 1))
@@ -55,7 +55,7 @@ describe('EsploraClient.blockHash', () => {
     await expect(newClient().blockHash(HEIGHT)).rejects.toBeInstanceOf(SizeLimitExceededError)
   })
 
-  it('404 del explorador → NetworkError (no EsploraResponseError silencioso)', async () => {
+  it('404 from the explorer → NetworkError (not a silent EsploraResponseError)', async () => {
     server.use(
       http.get(`${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`, () => new HttpResponse(null, { status: 404 }))
     )
@@ -72,23 +72,23 @@ describe('EsploraClient.block', () => {
   })
 
   it.each(['zz', 'a'.repeat(63), '', 'A'.repeat(65)])(
-    'rechaza hash de entrada inválido (%p) con ValidationError',
+    'rejects invalid input hash (%p) with ValidationError',
     async (h) => {
       await expect(newClient().block(h)).rejects.toBeInstanceOf(ValidationError)
     }
   )
 
-  it('cuerpo no-JSON → EsploraResponseError', async () => {
+  it('non-JSON body → EsploraResponseError', async () => {
     server.use(http.get(`${PUBLIC_ESPLORA_URL}/block/${BLOCKHASH}`, () => HttpResponse.text('<html>oops</html>')))
     await expect(newClient().block(BLOCKHASH)).rejects.toBeInstanceOf(EsploraResponseError)
   })
 
-  it('JSON que no es objeto → EsploraResponseError', async () => {
+  it('JSON that is not an object → EsploraResponseError', async () => {
     server.use(http.get(`${PUBLIC_ESPLORA_URL}/block/${BLOCKHASH}`, () => HttpResponse.json(42)))
     await expect(newClient().block(BLOCKHASH)).rejects.toBeInstanceOf(EsploraResponseError)
   })
 
-  it('merkle_root ausente o no hex → EsploraResponseError', async () => {
+  it('missing or non-hex merkle_root → EsploraResponseError', async () => {
     server.use(
       http.get(`${PUBLIC_ESPLORA_URL}/block/${BLOCKHASH}`, () =>
         HttpResponse.json({ ...okBody, merkle_root: 'not-hex' })
@@ -98,7 +98,7 @@ describe('EsploraClient.block', () => {
   })
 
   it.each([0, -5, 1.5, '1700000000'])(
-    'timestamp no entero positivo (%p) → EsploraResponseError',
+    'non-positive-integer timestamp (%p) → EsploraResponseError',
     async (t) => {
       server.use(
         http.get(`${PUBLIC_ESPLORA_URL}/block/${BLOCKHASH}`, () =>
@@ -123,13 +123,13 @@ describe('verifyTimestampAttestation', () => {
     )
   }
 
-  it('atestación bitcoin válida → devuelve el time del bloque', async () => {
+  it('valid Bitcoin attestation → returns block time', async () => {
     wireBlock(PUBLIC_ESPLORA_URL, BLOCKHASH, MERKLEROOT, TIME)
     const time = await verifyTimestampAttestation(DIGEST, makeBitcoin(HEIGHT), newClient())
     expect(time).toBe(TIME)
   })
 
-  it('atestación litecoin contra un explorador de Litecoin → devuelve el time', async () => {
+  it('Litecoin attestation against a Litecoin explorer → returns block time', async () => {
     const LTC_URL = 'https://litecoinspace.org/api'
     wireBlock(LTC_URL, BLOCKHASH, MERKLEROOT, TIME)
     const ltc = new EsploraClient(newLayer(), { url: LTC_URL })
@@ -137,24 +137,24 @@ describe('verifyTimestampAttestation', () => {
     expect(time).toBe(TIME)
   })
 
-  it('digest que no coincide con el merkleroot → falla (no valida en falso)', async () => {
+  it('digest does not match the merkle root → fails (no false positive)', async () => {
     wireBlock(PUBLIC_ESPLORA_URL, BLOCKHASH, 'cc'.repeat(32), TIME) // merkleroot != DIGEST
     await expect(
       verifyTimestampAttestation(DIGEST, makeBitcoin(HEIGHT), newClient())
     ).rejects.toThrow(/does not match/)
   })
 
-  it('atestación pending no es verificable en cadena → lanza', async () => {
+  it('pending attestation is not on-chain verifiable → throws', async () => {
     await expect(
       verifyTimestampAttestation(DIGEST, makePending('https://a.pool.opentimestamps.org'), newClient())
     ).rejects.toThrow(/cannot verify/)
   })
 })
 
-describe('EsploraClient — decodificación UTF-8', () => {
-  it('bytes UTF-8 inválidos en blockHash → EsploraResponseError con "invalid UTF-8"', async () => {
-    // 0xFF es un byte inválido en UTF-8; con fatal:false se reemplaza silenciosamente,
-    // con fatal:true debe lanzar EsploraResponseError explícito.
+describe('EsploraClient — UTF-8 decoding', () => {
+  it('invalid UTF-8 bytes in blockHash → EsploraResponseError with "invalid UTF-8"', async () => {
+    // 0xFF is invalid in UTF-8; with fatal:false it would be silently replaced,
+    // but with fatal:true it must throw an explicit EsploraResponseError.
     server.use(
       http.get(`${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`, () =>
         new HttpResponse(new Uint8Array([0x61, 0xFF, 0x62]), {
@@ -170,11 +170,11 @@ describe('EsploraClient — decodificación UTF-8', () => {
   })
 })
 
-describe('EsploraClient — validación de URL base', () => {
-  it('rechaza una URL base no http(s)', () => {
+describe('EsploraClient — base URL validation', () => {
+  it('rejects a non-http(s) base URL', () => {
     expect(() => new EsploraClient(newLayer(), { url: 'ftp://example.com' })).toThrow(ValidationError)
   })
-  it('rechaza una URL base malformada', () => {
+  it('rejects a malformed base URL', () => {
     expect(() => new EsploraClient(newLayer(), { url: 'not a url' })).toThrow(ValidationError)
   })
 })

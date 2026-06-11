@@ -4,7 +4,7 @@
 
 import { DEFAULT_CALENDAR_URLS } from '@otskit/core'
 
-/** Logger interface for observability */
+/** Logger interface for observability. */
 export interface Logger {
   debug(message: string, ...args: unknown[]): void
   info(message: string, ...args: unknown[]): void
@@ -44,7 +44,7 @@ export interface ResilienceOptions {
   connectTimeoutMs: number
   retries: RetryOptions
   circuitBreaker: CircuitBreakerOptions
-  /** Límite de bytes para el body de la respuesta. Default 100 KB. */
+  /** Maximum bytes allowed in the response body. Defaults to 100 KB. */
   maxResponseBytes?: number
 }
 
@@ -66,12 +66,12 @@ export interface ClientOptions {
   minimumSuccessfulSubmissions?: number
 
   /**
-   * Permite URLs de calendario que resuelven a IPs privadas/reservadas.
+   * Allows calendar URLs that resolve to private/reserved IPs.
    *
-   * **No activar en producción.** Útil para testing local o redes corporativas.
+   * **Do not enable in production.** Useful for local testing or corporate networks.
    *
-   * Incluso con `false`, la protección es best-effort contra DNS rebinding (TOCTOU).
-   * Para alta seguridad, complementar con egress filtering a nivel de red.
+   * Even when `false`, protection is best-effort against DNS rebinding (TOCTOU).
+   * For high-security environments, complement with network-level egress filtering.
    *
    * @default false
    */

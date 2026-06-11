@@ -69,7 +69,12 @@ export class CircuitBreaker {
       this.onSuccess(key, circuit)
       return result
     } catch (error) {
-      this.onFailure(key, circuit)
+      // 4xx semantic errors (e.g., "commitment not found yet") are not infrastructure
+      // failures — they must not open the circuit against an otherwise healthy calendar.
+      const is4xx = error instanceof Error && (error as { retryable?: boolean }).retryable === false
+      if (!is4xx) {
+        this.onFailure(key, circuit)
+      }
       throw error
     }
   }

@@ -32,7 +32,7 @@
 
 ### Developer Experience
 - **TypeScript-first** — Strict types throughout; full IntelliSense for every option and error
-- **Multi-runtime** — Node.js 18+, browsers, and edge runtimes (uses the standard `fetch` API)
+- **Node.js 20+** — Requires Node.js; uses native `crypto`, `dns`, and `net` APIs not available in browsers or edge runtimes
 - **Tree-shakeable** — Dual ESM/CJS build, zero runtime dependencies
 - **`AbortController` support** — Cancel any in-flight operation at any level
 - **Observable** — Drop-in `Logger` interface compatible with `console`, `pino`, `winston`, etc.

@@ -9,7 +9,7 @@ export class OpenTimestampsClientError extends Error {
   constructor(message: string, options?: { cause?: Error }) {
     super(message)
     this.name = this.constructor.name
-    this.cause = options?.cause
+    if (options?.cause !== undefined) this.cause = options.cause
     Error.captureStackTrace?.(this, this.constructor)
   }
 }
@@ -39,12 +39,12 @@ export class UpgradeError extends OpenTimestampsClientError {}
 
 /** Network-related error (timeout, all retries failed, etc.) */
 export class NetworkError extends OpenTimestampsClientError {
-  /** HTTP status code, cuando el fallo viene de una respuesta HTTP. */
+  /** HTTP status code when the failure originates from an HTTP response. */
   public readonly status?: number
 
   constructor(message: string, options?: { cause?: Error; status?: number }) {
     super(message, options)
-    this.status = options?.status
+    if (options?.status !== undefined) this.status = options.status
   }
 }
 
@@ -55,16 +55,16 @@ export class CircuitBreakerError extends NetworkError {
   }
 }
 
-/** El calendario no conoce (todavía) el commitment consultado (HTTP 404). */
+/** The calendar does not yet know the queried commitment (HTTP 404). */
 export class CommitmentNotFoundError extends NetworkError {}
 
-/** La respuesta del calendario supera el límite de tamaño permitido (defensa DoS). */
+/** The calendar response exceeds the allowed size limit (DoS defense). */
 export class CalendarResponseTooLargeError extends NetworkError {}
 
-/** Respuesta del explorador Esplora inválida: vacía, no-JSON, malformada o demasiado grande (defensa DoS). */
+/** Invalid Esplora response: empty, non-JSON, malformed, or too large (DoS defense). */
 export class EsploraResponseError extends NetworkError {}
 
-/** La respuesta supera el límite de bytes permitido (defensa DoS). */
+/** Response exceeds the allowed byte limit (DoS defense). */
 export class SizeLimitExceededError extends NetworkError {
   public readonly maxBytes: number
   public readonly actualBytes?: number
@@ -77,6 +77,6 @@ export class SizeLimitExceededError extends NetworkError {
       options,
     )
     this.maxBytes = maxBytes
-    this.actualBytes = actualBytes
+    if (actualBytes !== undefined) this.actualBytes = actualBytes
   }
 }

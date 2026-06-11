@@ -1,12 +1,12 @@
 /**
- * SSRF protection para calendarios configurables por el usuario.
+ * SSRF protection for user-configurable calendar URLs.
  *
- * LIMITACIONES (documentadas intencionalmente):
- * - TOCTOU/DNS rebinding: la validación DNS ocurre ANTES de la conexión.
- *   Un servidor con TTL=0 puede cambiar la IP entre la validación y el fetch.
- *   Mitigación real requiere egress filtering a nivel de red.
- * - IPv4-mapped IPv6 (::ffff:x.x.x.x): se bloquea el prefijo ::ffff:
- *   pero la validación del componente IPv4 depende del formato que devuelva Node.js.
+ * KNOWN LIMITATIONS (documented intentionally):
+ * - TOCTOU / DNS rebinding: DNS validation happens BEFORE the connection.
+ *   A server with TTL=0 can change its IP between validation and the actual fetch.
+ *   Real mitigation requires network-level egress filtering.
+ * - IPv4-mapped IPv6 (::ffff:x.x.x.x): the ::ffff: prefix is blocked but the
+ *   IPv4 component validation depends on the format Node.js returns.
  */
 
 import { lookup } from 'node:dns/promises'
@@ -46,7 +46,7 @@ function ipv4ToUint32(ip: string): number {
 function assertNotPrivateIPv4(ip: string, calendarUrl: string): void {
   const n = ipv4ToUint32(ip)
   for (const cidr of BLOCKED_CIDRS_V4) {
-    // >>> 0 normaliza a uint32 para que la comparación funcione con redes >= 128.0.0.0
+    // >>> 0 normalizes to uint32 so comparisons work for networks >= 128.0.0.0
     if (((n & cidr.mask) >>> 0) === cidr.network) {
       throw new ValidationError(
         `Calendar URL "${calendarUrl}" resolves to a private/reserved IPv4 address ` +
@@ -84,11 +84,11 @@ function assertNotPrivateIPv6(ip: string, calendarUrl: string): void {
 }
 
 /**
- * Valida que una URL de calendario es segura para hacer outbound HTTP.
- * Bloquea IPs privadas/reservadas por defecto.
+ * Validates that a calendar URL is safe for outbound HTTP requests.
+ * Blocks private/reserved IPs by default.
  *
- * @param allowPrivate Si true, omite la comprobación de rangos IP.
- *   Útil para testing local o redes corporativas internas.
+ * @param allowPrivate When true, skips the IP range check.
+ *   Useful for local testing or internal corporate networks.
  */
 export async function assertSafeCalendarUrl(
   url: string,
@@ -112,7 +112,7 @@ export async function assertSafeCalendarUrl(
   if (options.allowPrivate) return
 
   const hostname = parsed.hostname
-  // new URL() incluye corchetes en IPv6: "[::1]" → quitarlos para isIP/assertNot*
+  // new URL() wraps IPv6 in brackets: "[::1]" — strip them for isIP/assertNot* calls
   const host = hostname.startsWith('[') && hostname.endsWith(']')
     ? hostname.slice(1, -1)
     : hostname
@@ -121,7 +121,7 @@ export async function assertSafeCalendarUrl(
   if (ipVersion === 4) { assertNotPrivateIPv4(host, url); return }
   if (ipVersion === 6) { assertNotPrivateIPv6(host, url); return }
 
-  // Hostname — resolver DNS (sujeto a TOCTOU, ver JSDoc del módulo)
+  // Hostname — resolve DNS (subject to TOCTOU, see module JSDoc)
   let addresses: Array<{ address: string; family: number }>
   try {
     addresses = await lookup(hostname, { all: true })

@@ -10,6 +10,7 @@ import {
   DEFAULT_RESILIENCE,
   ResilienceOptions,
 } from './types.js'
+import { ValidationError } from './errors.js'
 import { InternalClientOptions } from './internal.js'
 import { ResilientNetworkLayer } from './network/resilience.js'
 import { orchestrateStamp, orchestrateUpgrade, orchestrateVerify } from './core/orchestration.js'
@@ -52,17 +53,26 @@ export class OpenTimestampsClient {
    * @param options Client configuration options
    */
   constructor(options: ClientOptions = {}) {
-    // Validate and set calendars
+    // Logger must be assigned first so it is available for all subsequent constructor calls.
+    this.logger = options.logger
+
     if (!options.calendars || options.calendars.length === 0) {
       this.calendars = DEFAULT_CALENDARS
-      /* v8 ignore next */ // this.logger is not yet assigned at this point in the constructor
       this.logger?.info('No calendars provided, using defaults')
     } else {
       this.calendars = options.calendars
     }
 
-    // Set minimum successful submissions (default: 2)
-    this.minimumSuccessfulSubmissions = options.minimumSuccessfulSubmissions ?? 2
+    const minSubs = options.minimumSuccessfulSubmissions ?? 2
+    if (!Number.isInteger(minSubs) || minSubs < 1) {
+      throw new ValidationError('minimumSuccessfulSubmissions must be an integer >= 1')
+    }
+    if (minSubs > this.calendars.length) {
+      throw new ValidationError(
+        `minimumSuccessfulSubmissions (${minSubs}) cannot exceed the number of calendars (${this.calendars.length})`
+      )
+    }
+    this.minimumSuccessfulSubmissions = minSubs
     this.allowPrivateCalendars = options.allowPrivateCalendars ?? false
 
     // Merge resilience options with defaults
@@ -83,8 +93,7 @@ export class OpenTimestampsClient {
       },
     }
 
-    this.logger = options.logger
-    this.globalSignal = options.signal
+    if (options.signal !== undefined) this.globalSignal = options.signal
     const internalOptions = options as InternalClientOptions
     this.networkLayer = internalOptions._networkLayer ?? new ResilientNetworkLayer(resilienceConfig, this.logger)
 

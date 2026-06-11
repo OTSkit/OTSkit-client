@@ -16,6 +16,7 @@ describe('OpenTimestampsClient', () => {
   it('should initialize with custom calendars', () => {
     const client = new OpenTimestampsClient({
       calendars: ['https://custom.calendar.example.com'],
+      minimumSuccessfulSubmissions: 1,
     })
     expect(client).toBeDefined()
   })

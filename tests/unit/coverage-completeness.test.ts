@@ -1,6 +1,6 @@
 /**
- * Tests de completitud de cobertura: ramas, funciones y líneas que no se ejercitan
- * en los tests de integración porque son edge cases de módulos de infraestructura.
+ * Coverage completeness tests: branches, functions, and lines not exercised
+ * by integration tests because they are edge cases in infrastructure modules.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
@@ -10,7 +10,7 @@ import { server } from '../mocks/server.js'
 import * as barrel from '../../src/index.js'
 
 describe('src/index.ts — barrel exports', () => {
-  it('exporta los símbolos principales del cliente', () => {
+  it('exports the main client symbols', () => {
     expect(typeof barrel.OpenTimestampsClient).toBe('function')
     expect(typeof barrel.EsploraClient).toBe('function')
     expect(typeof barrel.CalendarClient).toBe('function')
@@ -26,33 +26,33 @@ describe('src/index.ts — barrel exports', () => {
   })
 })
 
-// ─── src/client.ts — métodos de utilidad ──────────────────────────────────────
+// ─── src/client.ts — utility methods ─────────────────────────────────────────
 import { OpenTimestampsClient } from '../../src/client.js'
 
-describe('OpenTimestampsClient — métodos de utilidad', () => {
-  it('getCircuitState devuelve undefined para un calendario no visto', () => {
+describe('OpenTimestampsClient — utility methods', () => {
+  it('getCircuitState returns undefined for a never-seen calendar', () => {
     const client = new OpenTimestampsClient()
     expect(client.getCircuitState('https://never-used.example.com')).toBeUndefined()
   })
 
-  it('resetCircuit no lanza para un calendario no visto', () => {
+  it('resetCircuit does not throw for a never-seen calendar', () => {
     const client = new OpenTimestampsClient()
     expect(() => client.resetCircuit('https://never-used.example.com')).not.toThrow()
   })
 
-  it('resetAllCircuits no lanza', () => {
+  it('resetAllCircuits does not throw', () => {
     const client = new OpenTimestampsClient()
     expect(() => client.resetAllCircuits()).not.toThrow()
   })
 
-  it('resetCircuit con logger activo — cubre la rama logger?.info (true)', () => {
+  it('resetCircuit with active logger — covers the logger?.info (true) branch', () => {
     const info = vi.fn()
     const client = new OpenTimestampsClient({ logger: { debug: vi.fn(), info, warn: vi.fn(), error: vi.fn() } })
     client.resetCircuit('https://a.pool.opentimestamps.org')
     expect(info).toHaveBeenCalledWith(expect.stringContaining('Manually resetting'))
   })
 
-  it('resetAllCircuits con logger activo — cubre la rama logger?.info (true)', () => {
+  it('resetAllCircuits with active logger — covers the logger?.info (true) branch', () => {
     const info = vi.fn()
     const client = new OpenTimestampsClient({ logger: { debug: vi.fn(), info, warn: vi.fn(), error: vi.fn() } })
     client.resetAllCircuits()
@@ -65,22 +65,22 @@ import { ResilientNetworkLayer } from '../../src/network/resilience.js'
 import { DEFAULT_RESILIENCE } from '../../src/types.js'
 
 describe('ResilientNetworkLayer — reset methods', () => {
-  it('resetCircuit no lanza', () => {
+  it('resetCircuit does not throw', () => {
     const layer = new ResilientNetworkLayer(DEFAULT_RESILIENCE)
     expect(() => layer.resetCircuit('https://example.com')).not.toThrow()
   })
 
-  it('resetAllCircuits no lanza', () => {
+  it('resetAllCircuits does not throw', () => {
     const layer = new ResilientNetworkLayer(DEFAULT_RESILIENCE)
     expect(() => layer.resetAllCircuits()).not.toThrow()
   })
 })
 
-// ─── src/network/retry.ts — jitter y línea final ─────────────────────────────
+// ─── src/network/retry.ts — jitter and final line ────────────────────────────
 import { withRetry } from '../../src/network/retry.js'
 
-describe('withRetry — ramas no cubiertas por tests de integración', () => {
-  it('jitter=full no lanza (rama case full)', async () => {
+describe('withRetry — branches not covered by integration tests', () => {
+  it('jitter=full does not throw (case full branch)', async () => {
     const fn = vi.fn().mockResolvedValue('ok')
     const result = await withRetry(fn, {
       enabled: true,
@@ -90,7 +90,7 @@ describe('withRetry — ramas no cubiertas por tests de integración', () => {
     expect(result).toBe('ok')
   })
 
-  it('jitter=equal no lanza (rama case equal)', async () => {
+  it('jitter=equal does not throw (case equal branch)', async () => {
     const fn = vi.fn().mockResolvedValue('ok')
     const result = await withRetry(fn, {
       enabled: true,
@@ -100,7 +100,7 @@ describe('withRetry — ramas no cubiertas por tests de integración', () => {
     expect(result).toBe('ok')
   })
 
-  it('maxAttempts=0 → lanza (línea de seguridad TypeScript)', async () => {
+  it('maxAttempts=0 → throws (TypeScript safety line)', async () => {
     const fn = vi.fn().mockResolvedValue('ok')
     await expect(
       withRetry(fn, {
@@ -111,7 +111,7 @@ describe('withRetry — ramas no cubiertas por tests de integración', () => {
     ).rejects.toThrow()
   })
 
-  it('retry con jitter=full llega a reintentar (cubre el delay path con jitter full)', async () => {
+  it('retry with jitter=full actually retries (covers the delay path with full jitter)', async () => {
     let calls = 0
     const fn = vi.fn().mockImplementation(() => {
       calls++
@@ -127,7 +127,7 @@ describe('withRetry — ramas no cubiertas por tests de integración', () => {
     expect(calls).toBe(2)
   })
 
-  it('retry con jitter=equal llega a reintentar (cubre el delay path con jitter equal)', async () => {
+  it('retry with jitter=equal actually retries (covers the delay path with equal jitter)', async () => {
     let calls = 0
     const fn = vi.fn().mockImplementation(() => {
       calls++
@@ -143,16 +143,16 @@ describe('withRetry — ramas no cubiertas por tests de integración', () => {
   })
 })
 
-// ─── src/adapters/fetch-adapter.ts — ramas de error ─────────────────────────
+// ─── src/adapters/fetch-adapter.ts — error branches ──────────────────────────
 import { executeRequest } from '../../src/adapters/fetch-adapter.js'
 import { NetworkError } from '../../src/errors.js'
 
-describe('executeRequest — ramas de error', () => {
+describe('executeRequest — error branches', () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })
 
-  it('error con "timeout" en el mensaje → NetworkError Request timeout', async () => {
+  it('error with "timeout" in the message → NetworkError Request timeout', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(Object.assign(new Error('connection timeout'), {})))
     await expect(
       executeRequest({ url: 'https://example.com', method: 'GET' })
@@ -160,7 +160,7 @@ describe('executeRequest — ramas de error', () => {
     vi.unstubAllGlobals()
   })
 
-  it('error no-Error (string thrown) → NetworkError Unknown network error', async () => {
+  it('non-Error thrown (string) → NetworkError Unknown network error', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue('string error'))
     await expect(
       executeRequest({ url: 'https://example.com', method: 'GET' })
@@ -169,54 +169,54 @@ describe('executeRequest — ramas de error', () => {
   })
 })
 
-// ─── src/network/circuit-breaker.ts — ramas de logger ────────────────────────
+// ─── src/network/circuit-breaker.ts — logger branches ────────────────────────
 import { CircuitBreaker } from '../../src/network/circuit-breaker.js'
 
-describe('CircuitBreaker — ramas de logger', () => {
+describe('CircuitBreaker — logger branches', () => {
   const makeLogger = () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() })
   const opts = { enabled: true, failureThreshold: 2, recoveryTimeoutMs: 50, halfOpenMaxAttempts: 1 }
 
-  it('cubre logger.info al entrar en HALF_OPEN', async () => {
+  it('covers logger.info on entering HALF_OPEN', async () => {
     const logger = makeLogger()
     const cb = new CircuitBreaker(opts, logger)
     const fail = () => Promise.reject(new Error('boom'))
-    // Abrir el circuito (2 fallos)
+    // Open the circuit (2 failures)
     await expect(cb.execute('k', fail)).rejects.toThrow()
     await expect(cb.execute('k', fail)).rejects.toThrow()
-    // Esperar el recoveryTimeout y pedir de nuevo para entrar en HALF_OPEN
+    // Wait for the recovery timeout, then request again to enter HALF_OPEN
     await new Promise((r) => setTimeout(r, 60))
     await expect(cb.execute('k', fail)).rejects.toThrow()
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('HALF_OPEN'))
   })
 
-  it('cubre logger.warn al reabrir desde HALF_OPEN', async () => {
+  it('covers logger.warn when reopening from HALF_OPEN', async () => {
     const logger = makeLogger()
     const cb = new CircuitBreaker(opts, logger)
     const fail = () => Promise.reject(new Error('boom'))
-    // Abrir
+    // Open
     await expect(cb.execute('k2', fail)).rejects.toThrow()
     await expect(cb.execute('k2', fail)).rejects.toThrow()
-    // Esperar y reabrir
+    // Wait and reopen
     await new Promise((r) => setTimeout(r, 60))
     await expect(cb.execute('k2', fail)).rejects.toThrow()
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('reopening'))
   })
 
-  it('cubre logger.info al cerrar desde HALF_OPEN', async () => {
+  it('covers logger.info on closing from HALF_OPEN', async () => {
     const logger = makeLogger()
     const cb = new CircuitBreaker(opts, logger)
     const fail = () => Promise.reject(new Error('boom'))
     const succeed = () => Promise.resolve('ok')
-    // Abrir
+    // Open
     await expect(cb.execute('k3', fail)).rejects.toThrow()
     await expect(cb.execute('k3', fail)).rejects.toThrow()
-    // Esperar y tener éxito en HALF_OPEN → cierra
+    // Wait and succeed in HALF_OPEN → closes
     await new Promise((r) => setTimeout(r, 60))
     await expect(cb.execute('k3', succeed)).resolves.toBe('ok')
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('closing'))
   })
 
-  it('cubre logger.warn al abrir el circuito por umbral de fallos', async () => {
+  it('covers logger.warn when opening the circuit on failure threshold', async () => {
     const logger = makeLogger()
     const cb = new CircuitBreaker(opts, logger)
     const fail = () => Promise.reject(new Error('boom'))
@@ -226,11 +226,11 @@ describe('CircuitBreaker — ramas de logger', () => {
   })
 })
 
-// ─── src/network/calendar.ts — rama logger ────────────────────────────────────
+// ─── src/network/calendar.ts — logger branch ─────────────────────────────────
 import { CalendarClient } from '../../src/network/calendar.js'
 
-describe('CalendarClient — rama logger?.debug (true branch)', () => {
-  it('submit con logger cubre la rama logger?.debug', async () => {
+describe('CalendarClient — logger?.debug (true branch)', () => {
+  it('submit with logger covers the logger?.debug branch', async () => {
     const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
     const layer = new ResilientNetworkLayer({
       ...DEFAULT_RESILIENCE,
@@ -238,13 +238,13 @@ describe('CalendarClient — rama logger?.debug (true branch)', () => {
     })
     const ALICE = 'https://alice.btc.calendar.opentimestamps.org'
     const digest = new Uint8Array(32).fill(0xab)
-    // El handler de MSW devuelve un pending válido
+    // The MSW handler returns a valid pending response
     const client = new CalendarClient(ALICE, layer, logger)
     await client.submit(digest)
     expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('digest'))
   })
 
-  it('getTimestamp con logger cubre la rama logger?.debug', async () => {
+  it('getTimestamp with logger covers the logger?.debug branch', async () => {
     const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
     const layer = new ResilientNetworkLayer({
       ...DEFAULT_RESILIENCE,
@@ -258,16 +258,16 @@ describe('CalendarClient — rama logger?.debug (true branch)', () => {
   })
 })
 
-// ─── src/network/esplora.ts — rama logger ─────────────────────────────────────
+// ─── src/network/esplora.ts — logger branch ───────────────────────────────────
 import { EsploraClient, PUBLIC_ESPLORA_URL } from '../../src/network/esplora.js'
 
-describe('EsploraClient — rama logger?.debug (true branch)', () => {
+describe('EsploraClient — logger?.debug (true branch)', () => {
   const BLOCKHASH = 'bb'.repeat(32)
   const MERKLEROOT = 'aa'.repeat(32)
   const HEIGHT = 700000
   const TIME = 1700000000
 
-  it('blockHash con logger cubre la rama logger?.debug', async () => {
+  it('blockHash with logger covers the logger?.debug branch', async () => {
     const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
     const layer = new ResilientNetworkLayer({
       ...DEFAULT_RESILIENCE,
@@ -279,7 +279,7 @@ describe('EsploraClient — rama logger?.debug (true branch)', () => {
     expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('block-height'))
   })
 
-  it('block con logger cubre la rama logger?.debug', async () => {
+  it('block with logger covers the logger?.debug branch', async () => {
     const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
     const layer = new ResilientNetworkLayer({
       ...DEFAULT_RESILIENCE,
@@ -296,29 +296,29 @@ describe('EsploraClient — rama logger?.debug (true branch)', () => {
   })
 })
 
-// ─── src/core/orchestration.ts — ramas de assertHttpUrl y calendarios vacíos ──
+// ─── src/core/orchestration.ts — assertHttpUrl and empty-calendars branches ───
 import { orchestrateStamp } from '../../src/core/orchestration.js'
 
-describe('orchestrateStamp — ramas de validación directa', () => {
+describe('orchestrateStamp — direct validation branches', () => {
   const layer = new ResilientNetworkLayer({
     ...DEFAULT_RESILIENCE,
     retries: { ...DEFAULT_RESILIENCE.retries, enabled: false },
   })
   const hash = 'a'.repeat(64)
 
-  it('calendarios vacíos → ValidationError (línea defensiva)', async () => {
+  it('empty calendars → ValidationError (defensive line)', async () => {
     const { ValidationError } = await import('../../src/errors.js')
     await expect(orchestrateStamp(hash, [], layer, undefined, undefined, 1)).rejects.toBeInstanceOf(ValidationError)
   })
 
-  it('URL malformada (catch de new URL) → ValidationError', async () => {
+  it('malformed URL (new URL() catch) → ValidationError', async () => {
     const { ValidationError } = await import('../../src/errors.js')
     await expect(
       orchestrateStamp(hash, ['not a valid url'], layer, undefined, undefined, 1)
     ).rejects.toBeInstanceOf(ValidationError)
   })
 
-  it('URL de protocolo no http(s) (ftp://) → ValidationError', async () => {
+  it('non-http(s) protocol URL (ftp://) → ValidationError', async () => {
     const { ValidationError } = await import('../../src/errors.js')
     await expect(
       orchestrateStamp(hash, ['ftp://evil.example.com'], layer, undefined, undefined, 1)
@@ -327,11 +327,11 @@ describe('orchestrateStamp — ramas de validación directa', () => {
 })
 
 
-// ─── orchestration.ts — ramas de logger en verify ────────────────────────────
+// ─── orchestration.ts — logger branches in verify ────────────────────────────
 import { FAKE_COMPLETE_OTS } from '../mocks/handlers.js'
 
-describe('orchestrateVerify — ramas de logger', () => {
-  it('logger?.info en verificación exitosa', async () => {
+describe('orchestrateVerify — logger branches', () => {
+  it('logger?.info on successful verification', async () => {
     const info = vi.fn()
     const logger = { debug: vi.fn(), info, warn: vi.fn(), error: vi.fn() }
     const client = new OpenTimestampsClient({ logger })
@@ -340,7 +340,7 @@ describe('orchestrateVerify — ramas de logger', () => {
     expect(info).toHaveBeenCalledWith(expect.stringContaining('Verified against Bitcoin'))
   })
 
-  it('logger?.warn en verificación fallida (Esplora 404)', async () => {
+  it('logger?.warn on failed verification (Esplora 404)', async () => {
     const warn = vi.fn()
     const logger = { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() }
     server.use(
@@ -353,12 +353,12 @@ describe('orchestrateVerify — ramas de logger', () => {
   })
 })
 
-// ─── orchestration.ts — rama logger?.warn en upgrade (whitelist) ─────────────
+// ─── orchestration.ts — logger?.warn in upgrade (whitelist) ──────────────────
 import { orchestrateUpgrade } from '../../src/core/orchestration.js'
 import { DetachedTimestampFile, OpSHA256, makePending } from '@otskit/core'
 
-describe('orchestrateUpgrade — logger?.warn con calendario no whitelisted', () => {
-  it('cubre la rama logger?.warn cuando se ignora un calendario', async () => {
+describe('orchestrateUpgrade — logger?.warn with non-whitelisted calendar', () => {
+  it('covers the logger?.warn branch when a calendar is ignored', async () => {
     const warn = vi.fn()
     const logger = { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() }
     const dtf = DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(32).fill(0x11))
@@ -371,9 +371,9 @@ describe('orchestrateUpgrade — logger?.warn con calendario no whitelisted', ()
   })
 })
 
-// ─── resilience.ts — logger.debug (éxito) y logger.error (error) ─────────────
-describe('ResilientNetworkLayer — ramas de logger', () => {
-  it('cubre logger.debug en petición exitosa', async () => {
+// ─── resilience.ts — logger.debug (success) and logger.error (error) ─────────
+describe('ResilientNetworkLayer — logger branches', () => {
+  it('covers logger.debug on a successful request', async () => {
     const debug = vi.fn()
     const logger = { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn() }
     const layer = new ResilientNetworkLayer(
@@ -385,7 +385,7 @@ describe('ResilientNetworkLayer — ramas de logger', () => {
     expect(debug).toHaveBeenCalledWith(expect.stringContaining('succeeded'))
   })
 
-  it('cubre logger.error en petición fallida', async () => {
+  it('covers logger.error on a failed request', async () => {
     const error = vi.fn()
     const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error }
     const layer = new ResilientNetworkLayer(
@@ -403,9 +403,9 @@ describe('ResilientNetworkLayer — ramas de logger', () => {
   })
 })
 
-// ─── retry.ts — estrategia linear con reintento real + logger branches ───────
-describe('withRetry — estrategia linear con reintento', () => {
-  it('linear strategy retries correctamente (cubre lines 22-24)', async () => {
+// ─── retry.ts — linear strategy with real retry + logger branches ─────────────
+describe('withRetry — linear strategy with retry', () => {
+  it('linear strategy retries correctly (covers lines 22-24)', async () => {
     let calls = 0
     const fn = vi.fn().mockImplementation(() => {
       calls++
@@ -421,7 +421,7 @@ describe('withRetry — estrategia linear con reintento', () => {
     expect(calls).toBe(2)
   })
 
-  it('logger.warn al agotar todos los intentos', async () => {
+  it('logger.warn when all attempts are exhausted', async () => {
     const warn = vi.fn()
     const logger = { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() }
     const fn = vi.fn().mockRejectedValue(new Error('always fails'))
@@ -431,7 +431,7 @@ describe('withRetry — estrategia linear con reintento', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('attempts failed'))
   })
 
-  it('logger.debug al reintentar (cubre la rama logger?.debug en calculateDelay)', async () => {
+  it('logger.debug on retry (covers the logger?.debug branch in calculateDelay)', async () => {
     const debug = vi.fn()
     const logger = { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn() }
     let calls = 0
@@ -445,9 +445,9 @@ describe('withRetry — estrategia linear con reintento', () => {
   })
 })
 
-// ─── orchestration.ts — logger?.info y logger?.warn en stamp ─────────────────
-describe('orchestrateStamp — ramas de logger', () => {
-  it('logger.info y logger.warn en stamp (éxito parcial)', async () => {
+// ─── orchestration.ts — logger?.info and logger?.warn in stamp ───────────────
+describe('orchestrateStamp — logger branches', () => {
+  it('logger.info and logger.warn in stamp (partial success)', async () => {
     const info = vi.fn(); const warn = vi.fn()
     const logger = { debug: vi.fn(), info, warn, error: vi.fn() }
     const layer = new ResilientNetworkLayer(
@@ -465,9 +465,9 @@ describe('orchestrateStamp — ramas de logger', () => {
   })
 })
 
-// ─── orchestration.ts — logger?.warn en upgrade (error no-CommitmentNotFound) ─
-describe('orchestrateUpgrade — ramas adicionales', () => {
-  it('cubre logger?.warn cuando el calendario devuelve 503', async () => {
+// ─── orchestration.ts — logger?.warn in upgrade (non-CommitmentNotFound error) ─
+describe('orchestrateUpgrade — additional branches', () => {
+  it('covers logger?.warn when a calendar returns 503', async () => {
     const warn = vi.fn()
     const logger = { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() }
     server.use(
@@ -483,7 +483,7 @@ describe('orchestrateUpgrade — ramas adicionales', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Failed to query'))
   })
 
-  it('logger?.info cuando la prueba ya está completa (rama true de logger)', async () => {
+  it('logger?.info when proof is already complete (true branch of logger)', async () => {
     const info = vi.fn()
     const logger = { debug: vi.fn(), info, warn: vi.fn(), error: vi.fn() }
     const layer = new ResilientNetworkLayer(DEFAULT_RESILIENCE)
@@ -494,7 +494,7 @@ describe('orchestrateUpgrade — ramas adicionales', () => {
     expect(info).toHaveBeenCalledWith(expect.stringContaining('already complete'))
   })
 
-  it('logger?.debug cuando CommitmentNotFoundError (404) en upgrade', async () => {
+  it('logger?.debug when CommitmentNotFoundError (404) in upgrade', async () => {
     const debug = vi.fn()
     const logger = { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn() }
     server.use(
@@ -510,43 +510,43 @@ describe('orchestrateUpgrade — ramas adicionales', () => {
     expect(debug).toHaveBeenCalledWith(expect.stringContaining('not confirmed yet'))
   })
 
-  it('att.kind !== pending → continue (cubre rama unknown attestation)', async () => {
+  it('att.kind !== pending → continue (covers the unknown attestation branch)', async () => {
     const { makeUnknown } = await import('@otskit/core')
     const _leaf = new (await import('@otskit/core')).Timestamp(new Uint8Array(32).fill(0x33))
-    // timestamp con unknown + pending: unknown se salta, pending se consulta
+    // Timestamp with unknown + pending: unknown is skipped, pending is queried
     const dtf2 = DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(32).fill(0x33))
     const sub = dtf2.timestamp.add(new OpSHA256())
     sub.addAttestation(makeUnknown(new Uint8Array([0xde, 0xad, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]), new Uint8Array(0)))
     sub.addAttestation(makePending('https://alice.btc.calendar.opentimestamps.org'))
     const layer = new ResilientNetworkLayer(DEFAULT_RESILIENCE)
     const { orchestrateUpgrade: oUp } = await import('../../src/core/orchestration.js')
-    // alice devuelve pending (por defecto) → nada cambia → UpgradeError
+    // alice returns pending (default) → nothing changes → UpgradeError
     await expect(oUp(Buffer.from(dtf2.serializeToBytes()), [], layer)).rejects.toThrow()
   })
 })
 
-// ─── circuit-breaker.ts — halfOpenMaxAttempts || 1 y logger.warn ─────────────
-describe('CircuitBreaker — halfOpenMaxAttempts limit con logger', () => {
-  it('cubre la rama || 1 (halfOpenMaxAttempts=0) y logger.warn', async () => {
+// ─── circuit-breaker.ts — halfOpenMaxAttempts || 1 and logger.warn ────────────
+describe('CircuitBreaker — halfOpenMaxAttempts limit with logger', () => {
+  it('covers the || 1 branch (halfOpenMaxAttempts=0) and logger.warn', async () => {
     const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
     const opts = {
       enabled: true,
       failureThreshold: 1,
       recoveryTimeoutMs: 30,
-      halfOpenMaxAttempts: 0, // fuerza || 1 → maxAttempts=1
+      halfOpenMaxAttempts: 0, // forces || 1 → maxAttempts=1
     }
     const cb = new CircuitBreaker(opts, logger)
     const fail = () => Promise.reject(new Error('boom'))
-    // Abrir el circuito
+    // Open the circuit
     await expect(cb.execute('hk', fail)).rejects.toThrow()
-    // Esperar recovery
+    // Wait for recovery
     await new Promise((r) => setTimeout(r, 40))
-    // Primera llamada: abre HALF_OPEN, lanza la probe que falla, re-abre a OPEN
+    // First call: opens HALF_OPEN, fires the probe which fails, reopens to OPEN
     await expect(cb.execute('hk', fail)).rejects.toThrow()
-    // Segunda llamada: circuito OPEN pero ya pasó el timeout, entra HALF_OPEN, halfOpenAttempts=1 >= 1 → warn
+    // Second call: circuit OPEN but timeout elapsed, enters HALF_OPEN, halfOpenAttempts=1 >= 1 → warn
     await new Promise((r) => setTimeout(r, 40))
     await expect(cb.execute('hk', fail)).rejects.toThrow()
-    // El warn puede venir de la segunda o tercera llamada
+    // The warn may come from the second or third call
     expect(logger.warn).toHaveBeenCalled()
   })
 })

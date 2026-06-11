@@ -1,6 +1,5 @@
 /**
- * Universal fetch adapter para compatibilidad multi-runtime.
- * Funciona en Node.js 18+, browsers y edge runtimes.
+ * Fetch adapter for Node.js 20+.
  */
 
 import { NetworkError, SizeLimitExceededError } from '../errors.js'
@@ -20,7 +19,7 @@ export interface FetchResponse {
   data: Uint8Array
 }
 
-/** Lee el Content-Length header si existe y es un número válido. */
+/** Reads the Content-Length header if it exists and is a valid integer. */
 function getDeclaredContentLength(response: Response): number | undefined {
   const value = response.headers.get('content-length')
   if (value === null || !/^\d+$/.test(value)) return undefined
@@ -29,8 +28,8 @@ function getDeclaredContentLength(response: Response): number | undefined {
 }
 
 /**
- * Lee `body` como stream y acumula hasta `maxBytes`.
- * Cancela el stream y lanza `SizeLimitExceededError` si se supera el límite.
+ * Reads `body` as a stream and accumulates up to `maxBytes`.
+ * Cancels the stream and throws `SizeLimitExceededError` if the limit is exceeded.
  */
 async function readStreamLimited(
   body: ReadableStream<Uint8Array>,
@@ -60,8 +59,8 @@ async function readStreamLimited(
 }
 
 /**
- * Lee el body de una Response aplicando el límite de tamaño.
- * Comprueba Content-Length primero (defensa rápida) y luego lee el stream.
+ * Reads the body of a Response while enforcing the size limit.
+ * Checks Content-Length first (fast defense) then reads the stream.
  */
 async function readResponseBody(response: Response, maxBytes: number): Promise<Uint8Array> {
   const contentLength = getDeclaredContentLength(response)
@@ -70,7 +69,7 @@ async function readResponseBody(response: Response, maxBytes: number): Promise<U
   }
 
   if (response.body === null) {
-    // Respuestas sin body (204, 304, HEAD) — fallback seguro
+    // Bodyless responses (204, 304, HEAD) — safe fallback
     const ab = await response.arrayBuffer()
     if (ab.byteLength > maxBytes) {
       throw new SizeLimitExceededError(maxBytes, ab.byteLength, { status: response.status })
@@ -82,10 +81,10 @@ async function readResponseBody(response: Response, maxBytes: number): Promise<U
 }
 
 /**
- * Ejecuta una petición HTTP y devuelve la respuesta con el body limitado.
+ * Executes an HTTP request and returns the response with a bounded body.
  *
- * @param maxBytes Límite de bytes para el body de la respuesta.
- *                 Pasar `MAX_CALENDAR_RESPONSE_SIZE` (10 KB) o `MAX_ESPLORA_RESPONSE_SIZE` (100 KB).
+ * @param maxBytes Maximum bytes allowed in the response body.
+ *                 Pass `MAX_CALENDAR_RESPONSE_SIZE` (10 KB) or `MAX_ESPLORA_RESPONSE_SIZE` (100 KB).
  */
 export async function executeRequest(
   request: FetchRequest,
@@ -95,8 +94,9 @@ export async function executeRequest(
     const response = await globalThis.fetch(request.url, {
       method: request.method,
       headers: { 'Content-Type': 'application/octet-stream', ...request.headers },
-      body: request.body,
-      signal: request.signal,
+      ...(request.body !== undefined ? { body: request.body } : {}),
+      ...(request.signal !== undefined ? { signal: request.signal } : {}),
+      redirect: 'error',
     })
 
     const data = await readResponseBody(response, maxBytes)
@@ -115,8 +115,8 @@ export async function executeRequest(
 }
 
 /**
- * Crea un AbortController con timeout.
- * El controller hijo se aborta si se supera `timeoutMs` o si `parentSignal` se aborta.
+ * Creates an AbortController with a timeout.
+ * The child controller is aborted when `timeoutMs` elapses or when `parentSignal` is aborted.
  */
 export function createTimeoutController(timeoutMs: number, parentSignal?: AbortSignal): AbortController {
   const controller = new AbortController()

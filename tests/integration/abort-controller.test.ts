@@ -8,12 +8,12 @@ import { server } from '../mocks/server.js'
 import { http, HttpResponse, delay } from 'msw'
 import { Timestamp, StreamSerializationContext, makePending } from '@otskit/core'
 
-// Calendarios *.example.com no se pueden resolver por DNS en los tests; allowPrivateCalendars
-// desactiva la validación SSRF para que los tests de abort/timeout funcionen correctamente.
+// *.example.com calendars cannot be resolved via DNS in tests; allowPrivateCalendars
+// disables SSRF validation so abort/timeout tests work correctly.
 const localClient = (options: Omit<ClientOptions, 'allowPrivateCalendars'> = {}) =>
   new OpenTimestampsClient({ ...options, allowPrivateCalendars: true })
 
-/** Respuesta OTS canónica mínima para un digest arbitrario. */
+/** Minimal canonical OTS response for an arbitrary digest. */
 function pendingOtsResponse(body: ArrayBuffer): ArrayBuffer {
   const digest = new Uint8Array(body)
   const ts = new Timestamp(digest)
@@ -30,6 +30,7 @@ describe('AbortController Integration', () => {
     it('should abort stamp operation when signal is aborted', async () => {
       const client = localClient({
         calendars: ['https://slow-calendar.example.com'],
+        minimumSuccessfulSubmissions: 1,
       })
 
       // Mock slow response
@@ -105,6 +106,7 @@ describe('AbortController Integration', () => {
     it('should abort upgrade operation when signal is aborted', async () => {
       const client = localClient({
         calendars: ['https://slow-calendar.example.com'],
+        minimumSuccessfulSubmissions: 1,
       })
 
       server.use(
