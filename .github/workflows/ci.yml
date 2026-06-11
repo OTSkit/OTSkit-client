@@ -35,6 +35,10 @@ jobs:
           node-version: '22.x'
       - run: npm install
       - run: npm run coverage
+      - uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: false
+          files: ./coverage/lcov.info
 
   build:
     name: Build
