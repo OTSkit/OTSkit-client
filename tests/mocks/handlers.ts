@@ -2,6 +2,7 @@
  * MSW handlers — canonical OTS protocol (calendars) + Esplora, with fixtures built
  * in memory using the canonical core. Disk .ots files are NOT read (they are not canonical).
  */
+import { createHash } from 'node:crypto'
 import { http, HttpResponse } from 'msw'
 import {
   Timestamp,
@@ -74,11 +75,26 @@ const complete = DetachedTimestampFile.fromHash(new OpSHA256(), FILE_DIGEST)
 const completeLeaf = complete.timestamp.add(new OpSHA256())
 completeLeaf.addAttestation(makeBitcoin(BITCOIN_HEIGHT))
 export const FAKE_COMPLETE_OTS: Uint8Array = complete.serializeToBytes()
-// Block merkle root = Bitcoin leaf digest REVERSED (big-endian)
-const COMPLETE_MERKLEROOT = bytesToHex(Uint8Array.from(completeLeaf.getDigest()).reverse())
-const COMPLETE_BLOCK_HASH = 'ab'.repeat(32)
 
-export { BITCOIN_HEIGHT, BLOCK_TIME, COMPLETE_BLOCK_HASH }
+// Raw block header for the complete fixture.
+// Merkle root at bytes 36..68 = leaf digest reversed (internal Bitcoin byte order).
+// sha256d(header) reversed = block hash (self-authenticating, mirrors real Bitcoin).
+const sha256d = (data: Uint8Array): Uint8Array => {
+  const first = createHash('sha256').update(data).digest()
+  return new Uint8Array(createHash('sha256').update(first).digest())
+}
+export const COMPLETE_RAW_HEADER: Uint8Array = (() => {
+  const h = new Uint8Array(80)
+  h.set(Uint8Array.from(completeLeaf.getDigest()).reverse(), 36)
+  h[68] = BLOCK_TIME & 0xff
+  h[69] = (BLOCK_TIME >> 8) & 0xff
+  h[70] = (BLOCK_TIME >> 16) & 0xff
+  h[71] = (BLOCK_TIME >> 24) & 0xff
+  return h
+})()
+export const COMPLETE_BLOCK_HASH: string = Buffer.from(sha256d(COMPLETE_RAW_HEADER)).reverse().toString('hex')
+
+export { BITCOIN_HEIGHT, BLOCK_TIME }
 
 export const handlers = [
   // Real OTS protocol: submit. Returns a pending Timestamp committed to the sent digest.
@@ -95,17 +111,27 @@ export const handlers = [
       return otsResponse(pendingResponseFor(commitment, url))
     })
   ),
-  // Esplora — block by height (plain text: hash) and by hash (JSON with merkle_root + timestamp).
+  // Esplora — block-height (text), raw header (octet-stream, self-authenticating).
   http.get('https://blockstream.info/api/block-height/:height', ({ params }) => {
     if (String(params.height) === String(BITCOIN_HEIGHT)) return HttpResponse.text(COMPLETE_BLOCK_HASH)
     return new HttpResponse(null, { status: 404 })
   }),
+  http.get('https://blockstream.info/api/block/:hash/header', ({ params }) => {
+    if (String(params.hash) === COMPLETE_BLOCK_HASH) {
+      return new HttpResponse(COMPLETE_RAW_HEADER, {
+        status: 200,
+        headers: { 'Content-Type': 'application/octet-stream' },
+      })
+    }
+    return new HttpResponse(null, { status: 404 })
+  }),
+  // JSON endpoint kept for EsploraClient.block() unit tests.
   http.get('https://blockstream.info/api/block/:hash', ({ params }) => {
     if (String(params.hash) === COMPLETE_BLOCK_HASH) {
       return HttpResponse.json({
         id: COMPLETE_BLOCK_HASH,
         height: BITCOIN_HEIGHT,
-        merkle_root: COMPLETE_MERKLEROOT,
+        merkle_root: bytesToHex(Uint8Array.from(completeLeaf.getDigest()).reverse()),
         timestamp: BLOCK_TIME,
       })
     }

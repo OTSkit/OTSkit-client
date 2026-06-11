@@ -46,6 +46,7 @@ export class OpenTimestampsClient {
   private globalSignal?: AbortSignal
   private minimumSuccessfulSubmissions: number
   private allowPrivateCalendars: boolean
+  private esploraUrl: string | undefined
 
   /**
    * Create a new OpenTimestamps client
@@ -74,6 +75,7 @@ export class OpenTimestampsClient {
     }
     this.minimumSuccessfulSubmissions = minSubs
     this.allowPrivateCalendars = options.allowPrivateCalendars ?? false
+    this.esploraUrl = options.esploraUrl
 
     // Merge resilience options with defaults
     const resilienceConfig: ResilienceOptions = {
@@ -187,7 +189,7 @@ export class OpenTimestampsClient {
     proof: Buffer,
     originalDataHash?: Buffer | string
   ): Promise<VerificationResult> {
-    return orchestrateVerify(proof, this.networkLayer, originalDataHash, this.logger, this.globalSignal)
+    return orchestrateVerify(proof, this.networkLayer, originalDataHash, this.logger, this.globalSignal, this.esploraUrl)
   }
 
   /**

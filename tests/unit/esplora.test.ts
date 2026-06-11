@@ -110,35 +110,100 @@ describe('EsploraClient.block', () => {
   )
 })
 
+import { createHash } from 'node:crypto'
 import { verifyTimestampAttestation } from '../../src/network/esplora.js'
 import { makeBitcoin, makeLitecoin, makePending } from '@otskit/core'
 
+/**
+ * Builds a syntactically valid 80-byte block header whose merkle root (bytes 36..68)
+ * is set to `merkleRoot`, and whose sha256d reversed equals the returned `hash`.
+ * Used to produce self-consistent test data for rawBlockHeader.
+ */
+function makeRawHeader(merkleRoot: Uint8Array, time: number): { header: Uint8Array; hash: string } {
+  const header = new Uint8Array(80)
+  header.set(merkleRoot, 36)
+  header[68] = time & 0xff
+  header[69] = (time >> 8) & 0xff
+  header[70] = (time >> 16) & 0xff
+  header[71] = (time >> 24) & 0xff
+  const first = createHash('sha256').update(header).digest()
+  const second = new Uint8Array(createHash('sha256').update(first).digest())
+  const hash = Buffer.from(second).reverse().toString('hex')
+  return { header, hash }
+}
+
+describe('EsploraClient.rawBlockHeader', () => {
+  it('GET /block/{hash}/header → 80-byte header (self-authenticated)', async () => {
+    const { header, hash } = makeRawHeader(DIGEST, TIME)
+    server.use(
+      http.get(`${PUBLIC_ESPLORA_URL}/block/${hash}/header`, () =>
+        new HttpResponse(header, { status: 200, headers: { 'Content-Type': 'application/octet-stream' } })
+      )
+    )
+    const result = await newClient().rawBlockHeader(hash)
+    expect(result).toEqual(header)
+  })
+
+  it('tampered header (hash mismatch) → EsploraResponseError', async () => {
+    const { header, hash } = makeRawHeader(DIGEST, TIME)
+    const tampered = new Uint8Array(header)
+    tampered[0] ^= 0xff // flip one byte
+    server.use(
+      http.get(`${PUBLIC_ESPLORA_URL}/block/${hash}/header`, () =>
+        new HttpResponse(tampered, { status: 200, headers: { 'Content-Type': 'application/octet-stream' } })
+      )
+    )
+    await expect(newClient().rawBlockHeader(hash)).rejects.toBeInstanceOf(EsploraResponseError)
+  })
+
+  it('wrong size response → EsploraResponseError', async () => {
+    const { hash } = makeRawHeader(DIGEST, TIME)
+    server.use(
+      http.get(`${PUBLIC_ESPLORA_URL}/block/${hash}/header`, () =>
+        new HttpResponse(new Uint8Array(79), { status: 200, headers: { 'Content-Type': 'application/octet-stream' } })
+      )
+    )
+    await expect(newClient().rawBlockHeader(hash)).rejects.toBeInstanceOf(EsploraResponseError)
+  })
+
+  it.each(['zz', 'a'.repeat(63), ''])(
+    'invalid hash (%p) → ValidationError',
+    async (h) => {
+      await expect(newClient().rawBlockHeader(h)).rejects.toBeInstanceOf(ValidationError)
+    }
+  )
+})
+
 describe('verifyTimestampAttestation', () => {
-  const wireBlock = (baseUrl: string, hash: string, merkleroot: string, time: number) => {
+  const wireRaw = (baseUrl: string, hash: string, header: Uint8Array) => {
     server.use(
       http.get(`${baseUrl}/block-height/${HEIGHT}`, () => HttpResponse.text(hash)),
-      http.get(`${baseUrl}/block/${hash}`, () =>
-        HttpResponse.json({ id: hash, height: HEIGHT, merkle_root: merkleroot, timestamp: time })
+      http.get(`${baseUrl}/block/${hash}/header`, () =>
+        new HttpResponse(header, { status: 200, headers: { 'Content-Type': 'application/octet-stream' } })
       )
     )
   }
 
   it('valid Bitcoin attestation → returns block time', async () => {
-    wireBlock(PUBLIC_ESPLORA_URL, BLOCKHASH, MERKLEROOT, TIME)
+    const { header, hash } = makeRawHeader(DIGEST, TIME)
+    wireRaw(PUBLIC_ESPLORA_URL, hash, header)
     const time = await verifyTimestampAttestation(DIGEST, makeBitcoin(HEIGHT), newClient())
     expect(time).toBe(TIME)
   })
 
   it('Litecoin attestation against a Litecoin explorer → returns block time', async () => {
     const LTC_URL = 'https://litecoinspace.org/api'
-    wireBlock(LTC_URL, BLOCKHASH, MERKLEROOT, TIME)
+    const { header, hash } = makeRawHeader(DIGEST, TIME)
+    wireRaw(LTC_URL, hash, header)
     const ltc = new EsploraClient(newLayer(), { url: LTC_URL })
     const time = await verifyTimestampAttestation(DIGEST, makeLitecoin(HEIGHT), ltc)
     expect(time).toBe(TIME)
   })
 
   it('digest does not match the merkle root → fails (no false positive)', async () => {
-    wireBlock(PUBLIC_ESPLORA_URL, BLOCKHASH, 'cc'.repeat(32), TIME) // merkleroot != DIGEST
+    const wrongDigest = new Uint8Array(32).fill(0xcc)
+    const { header, hash } = makeRawHeader(wrongDigest, TIME) // merkleroot != DIGEST
+    wireRaw(PUBLIC_ESPLORA_URL, hash, header)
     await expect(
       verifyTimestampAttestation(DIGEST, makeBitcoin(HEIGHT), newClient())
     ).rejects.toThrow(/does not match/)

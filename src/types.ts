@@ -66,6 +66,13 @@ export interface ClientOptions {
   minimumSuccessfulSubmissions?: number
 
   /**
+   * Base URL for the Esplora block explorer used by verify().
+   * Defaults to Blockstream (https://blockstream.info/api).
+   * Override to use a self-hosted or alternative explorer.
+   */
+  esploraUrl?: string
+
+  /**
    * Allows calendar URLs that resolve to private/reserved IPs.
    *
    * **Do not enable in production.** Useful for local testing or corporate networks.

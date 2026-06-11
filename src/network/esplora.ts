@@ -1,7 +1,8 @@
 /**
  * Esplora/Blockstream explorer client for on-chain verification.
  */
-import { verifyAgainstBlockheader, VerificationError } from '@otskit/core'
+import { createHash } from 'node:crypto'
+import { verifyAgainstRawHeader, VerificationError } from '@otskit/core'
 import type { Attestation, BlockHeader } from '@otskit/core'
 import { ResilientNetworkLayer } from './resilience.js'
 import { Logger } from '../types.js'
@@ -13,6 +14,9 @@ export const PUBLIC_ESPLORA_URL = 'https://blockstream.info/api'
 /** Maximum size of an Esplora response (DoS defense). A JSON block header is a few hundred bytes. */
 export const MAX_ESPLORA_RESPONSE_SIZE = 100_000
 
+/** Raw Bitcoin block header is always exactly 80 bytes. */
+const RAW_HEADER_SIZE = 80
+
 /** Block hash / merkle root: 64-character hex string. */
 const HEX64_RE = /^[0-9a-f]{64}$/i
 
@@ -20,6 +24,16 @@ export interface EsploraClientOptions {
   /** Base URL of the explorer (defaults to Blockstream). Useful for pointing to a Litecoin Esplora. */
   url?: string
   logger?: Logger
+}
+
+/**
+ * sha256d in Bitcoin display format: sha256(sha256(data)) reversed as lowercase hex.
+ * Used to self-authenticate a raw block header against its block hash.
+ */
+function sha256dDisplayHex(data: Uint8Array): string {
+  const first = createHash('sha256').update(data).digest()
+  const second = createHash('sha256').update(first).digest()
+  return Buffer.from(second).reverse().toString('hex')
 }
 
 /** Client for a remote Esplora explorer. */
@@ -96,6 +110,37 @@ export class EsploraClient {
     return { merkleroot, time }
   }
 
+  /**
+   * Fetches the raw 80-byte block header for `hash` and self-authenticates it:
+   * sha256d(rawHeader) reversed must equal `hash`. This removes trust in the explorer's
+   * JSON layer — the raw header is cryptographically bound to the block hash we requested.
+   */
+  async rawBlockHeader(hash: string, signal?: AbortSignal): Promise<Uint8Array> {
+    if (typeof hash !== 'string' || !HEX64_RE.test(hash)) {
+      throw new ValidationError('block hash must be a 64-char hex string')
+    }
+    this.#logger?.debug(`Esplora raw header ${hash}`)
+    const response = await this.#networkLayer.request(
+      this.#url,
+      { url: `${this.#url}/block/${hash}/header`, method: 'GET', headers: { Accept: 'application/octet-stream' } },
+      signal,
+    )
+    const data = response.data
+    if (data.length !== RAW_HEADER_SIZE) {
+      throw new EsploraResponseError(
+        `raw block header must be ${RAW_HEADER_SIZE} bytes; got ${data.length}`,
+      )
+    }
+    // Self-authenticate: sha256d(rawHeader) reversed == display block hash.
+    const actualHash = sha256dDisplayHex(data)
+    if (actualHash !== hash.toLowerCase()) {
+      throw new EsploraResponseError(
+        `raw block header hash mismatch: expected ${hash.toLowerCase()}, got ${actualHash}`,
+      )
+    }
+    return data
+  }
+
   /** Decodes the response body as text, enforcing the size limit (fail-closed). */
   #decode(data: Uint8Array): string {
     if (data.length > MAX_ESPLORA_RESPONSE_SIZE) {
@@ -134,6 +179,8 @@ export async function verifyTimestampAttestation(
     throw new VerificationError(`cannot verify a '${attestation.kind}' attestation against the chain`)
   }
   const hash = await explorer.blockHash(attestation.height, signal)
-  const header = await explorer.block(hash, signal)
-  return verifyAgainstBlockheader(digest, header)
+  // Raw 80-byte header is self-authenticating: sha256d(header) == block hash.
+  // This removes reliance on the explorer's JSON parsing of merkle_root.
+  const rawHeader = await explorer.rawBlockHeader(hash, signal)
+  return verifyAgainstRawHeader(digest, rawHeader)
 }

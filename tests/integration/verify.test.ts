@@ -1,11 +1,29 @@
 /** Integration tests for verify() — canonical Esplora, fail-closed. */
+import { createHash } from 'node:crypto'
 import { describe, it, expect } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../mocks/server.js'
 import { OpenTimestampsClient } from '../../src/client.js'
-import { DetachedTimestampFile, OpSHA256, OpSHA1, OpAppend, makeBitcoin, bytesToHex } from '@otskit/core'
+import { DetachedTimestampFile, OpSHA256, OpSHA1, OpAppend, makeBitcoin } from '@otskit/core'
 import { FAKE_COMPLETE_OTS, FAKE_INCOMPLETE_OTS, BITCOIN_HEIGHT, BLOCK_TIME } from '../mocks/handlers.js'
 import { MAX_BITCOIN_ATTESTATIONS } from '../../src/core/orchestration.js'
+
+const sha256d = (data: Uint8Array): Uint8Array => {
+  const first = createHash('sha256').update(data).digest()
+  return new Uint8Array(createHash('sha256').update(first).digest())
+}
+
+/** Builds a valid raw header whose merkle root (bytes 36..68) equals `merkleRootInternal`. */
+function rawHeaderFor(merkleRootInternal: Uint8Array, time: number): { header: Uint8Array; hash: string } {
+  const header = new Uint8Array(80)
+  header.set(merkleRootInternal, 36)
+  header[68] = time & 0xff
+  header[69] = (time >> 8) & 0xff
+  header[70] = (time >> 16) & 0xff
+  header[71] = (time >> 24) & 0xff
+  const hash = Buffer.from(sha256d(header)).reverse().toString('hex')
+  return { header, hash }
+}
 
 describe('verify() - Integration', () => {
   it('verifies a complete proof against the chain', async () => {
@@ -65,13 +83,14 @@ describe('verify() - Integration', () => {
     leafBad.addAttestation(makeBitcoin(111111))
     const leafGood = dtf.timestamp.add(new OpAppend(new Uint8Array([0x01]))).add(new OpSHA256()) // 32 bytes
     leafGood.addAttestation(makeBitcoin(222222))
-    const goodHash = 'cd'.repeat(32)
-    const goodMerkleroot = bytesToHex(Uint8Array.from(leafGood.getDigest()).reverse())
+    // Build a self-authenticating raw header for the good block.
+    const goodMerkleRootInternal = Uint8Array.from(leafGood.getDigest()).reverse()
+    const { header: goodRawHeader, hash: goodHash } = rawHeaderFor(goodMerkleRootInternal, 1700000000)
     server.use(
       http.get('https://blockstream.info/api/block-height/111111', () => new HttpResponse(null, { status: 404 })),
       http.get('https://blockstream.info/api/block-height/222222', () => HttpResponse.text(goodHash)),
-      http.get(`https://blockstream.info/api/block/${goodHash}`, () =>
-        HttpResponse.json({ merkle_root: goodMerkleroot, timestamp: 1700000000 })
+      http.get(`https://blockstream.info/api/block/${goodHash}/header`, () =>
+        new HttpResponse(goodRawHeader, { status: 200, headers: { 'Content-Type': 'application/octet-stream' } })
       )
     )
     const result = await new OpenTimestampsClient().verify(Buffer.from(dtf.serializeToBytes()))

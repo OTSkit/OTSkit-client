@@ -198,6 +198,7 @@ export async function orchestrateVerify(
   originalDataHash?: Buffer | string,
   logger?: Logger,
   signal?: AbortSignal,
+  esploraUrl?: string,
 ): Promise<VerificationResult> {
   // Corrupt .ots → throw ValidationError (consistent with orchestrateUpgrade API)
   let detached: DetachedTimestampFile
@@ -268,7 +269,10 @@ export async function orchestrateVerify(
     }
   }
 
-  const explorer = new EsploraClient(networkLayer)
+  const explorer = new EsploraClient(networkLayer, {
+    ...(esploraUrl !== undefined ? { url: esploraUrl } : {}),
+    ...(logger !== undefined ? { logger } : {}),
+  })
   let lastNetworkError: string | undefined
   let lastCryptoError: string | undefined
 
