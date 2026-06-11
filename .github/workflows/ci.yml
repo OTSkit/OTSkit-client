@@ -35,10 +35,10 @@ jobs:
           node-version: '22.x'
       - run: npm install
       - run: npm run coverage
-      - uses: codecov/codecov-action@v5
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: OTSkit/OTSkit-client
           fail_ci_if_error: false
           files: ./coverage/lcov.info
 
