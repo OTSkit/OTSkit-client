@@ -38,7 +38,7 @@ jobs:
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: otskit/otskit-client
+          slug: OTSkit/otskit-client
           fail_ci_if_error: false
           files: ./coverage/lcov.info
 
