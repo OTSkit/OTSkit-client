@@ -1,3 +1,15 @@
+# [0.5.0](https://github.com/OTSkit/OTSkit-client/compare/v0.4.0...v0.5.0) (2026-06-11)
+
+
+### Bug Fixes
+
+* silence TS6 baseUrl deprecation warning in tsup dts build ([0d325e9](https://github.com/OTSkit/OTSkit-client/commit/0d325e9f220ec0932b06bc769c054b8f307ca87d))
+
+
+### Features
+
+* verify against raw 80-byte block headers (self-authenticating) ([792b963](https://github.com/OTSkit/OTSkit-client/commit/792b96388f5da0e67474ef6bd4272644793296a1))
+
 # [0.4.0](https://github.com/OTSkit/OTSkit-client/compare/v0.3.0...v0.4.0) (2026-06-10)
 
 
