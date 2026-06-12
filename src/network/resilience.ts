@@ -9,11 +9,11 @@ import { executeRequest, createTimeoutController, FetchRequest, FetchResponse } 
 import { NetworkError } from '../errors.js'
 
 export class ResilientNetworkLayer {
-  private circuitBreaker: CircuitBreaker
+  private readonly circuitBreaker: CircuitBreaker
 
   constructor(
-    private options: ResilienceOptions,
-    private logger?: Logger
+    private readonly options: ResilienceOptions,
+    private readonly logger?: Logger
   ) {
     this.circuitBreaker = new CircuitBreaker(options.circuitBreaker, logger)
   }

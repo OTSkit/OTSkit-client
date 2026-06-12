@@ -35,10 +35,10 @@ const BLOCKED_CIDRS_V4: readonly BlockedCidr4[] = [
 function ipv4ToUint32(ip: string): number {
   const parts = ip.split('.')
   return (
-    ((parseInt(parts[0]!, 10) << 24) |
-      (parseInt(parts[1]!, 10) << 16) |
-      (parseInt(parts[2]!, 10) << 8) |
-      parseInt(parts[3]!, 10)) >>>
+    ((Number.parseInt(parts[0]!, 10) << 24) |
+      (Number.parseInt(parts[1]!, 10) << 16) |
+      (Number.parseInt(parts[2]!, 10) << 8) |
+      Number.parseInt(parts[3]!, 10)) >>>
     0
   )
 }

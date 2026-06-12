@@ -40,13 +40,13 @@ import { orchestrateStamp, orchestrateUpgrade, orchestrateVerify } from './core/
  * ```
  */
 export class OpenTimestampsClient {
-  private calendars: string[]
-  private networkLayer: ResilientNetworkLayer
-  private logger?: ClientOptions['logger']
-  private globalSignal?: AbortSignal
-  private minimumSuccessfulSubmissions: number
-  private allowPrivateCalendars: boolean
-  private esploraUrl: string | undefined
+  private readonly calendars: string[]
+  private readonly networkLayer: ResilientNetworkLayer
+  private readonly logger?: ClientOptions['logger']
+  private readonly globalSignal?: AbortSignal
+  private readonly minimumSuccessfulSubmissions: number
+  private readonly allowPrivateCalendars: boolean
+  private readonly esploraUrl: string | undefined
 
   /**
    * Create a new OpenTimestamps client

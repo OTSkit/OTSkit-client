@@ -18,11 +18,11 @@ interface CircuitStats {
 }
 
 export class CircuitBreaker {
-  private circuits = new Map<string, { state: CircuitState; stats: CircuitStats }>()
-  
+  private readonly circuits = new Map<string, { state: CircuitState; stats: CircuitStats }>()
+
   constructor(
-    private options: CircuitBreakerOptions,
-    private logger?: Logger
+    private readonly options: CircuitBreakerOptions,
+    private readonly logger?: Logger
   ) {}
 
   /**

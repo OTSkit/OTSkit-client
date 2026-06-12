@@ -1,5 +1,5 @@
-import { createHash } from 'crypto'
-import { createReadStream } from 'fs'
+import { createHash } from 'node:crypto'
+import { createReadStream } from 'node:fs'
 
 export function hashBuffer(data: Buffer | Uint8Array): Buffer {
   return createHash('sha256').update(data).digest()
