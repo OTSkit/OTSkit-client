@@ -151,7 +151,7 @@ export class OpenTimestampsClient {
    * const upgradedProof = await client.upgrade(incompleteProof)
    * 
    * // If upgrade throws UpgradeError, Bitcoin hasn't confirmed yet
-   * // Retry later (typically 10-60 minutes after stamp)
+   * // Retry later (typically ~60 minutes after stamp)
    * ```
    */
   async upgrade(incompleteProof: Buffer, options?: OperationOptions): Promise<Buffer> {

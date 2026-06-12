@@ -42,7 +42,7 @@
 
 ---
 
-> **Note on confirmation times:** After `stamp()`, the proof is `pending` — registered with calendar servers but not yet anchored to Bitcoin. Confirmations typically arrive within **10–60 minutes**, but can take **several hours** during network congestion. Call `upgrade()` periodically to check; a pending proof is not a failed proof — an `UpgradeError` simply means the blockchain hasn't confirmed yet.
+> **Note on confirmation times:** After `stamp()`, the proof is `pending` — registered with calendar servers but not yet anchored to Bitcoin. Confirmations typically arrive within **~60 minutes**, but can take **several hours** during network congestion. Call `upgrade()` periodically to check; a pending proof is not a failed proof — an `UpgradeError` simply means the blockchain hasn't confirmed yet.
 
 ---
 
@@ -70,7 +70,7 @@ const hash = await hashFile('contract.pdf')
 // 2. Submit to calendars → get a pending .ots proof
 const pendingProof = await client.stamp(hash)
 writeFileSync('contract.pdf.ots', pendingProof)
-console.log('Proof saved — Bitcoin confirmation usually arrives in 10–60 minutes.')
+console.log('Proof saved — Bitcoin confirmation usually arrives in ~60 minutes.')
 
 // 3. Later: query calendars for a Bitcoin confirmation
 const upgradedProof = await client.upgrade(pendingProof)
