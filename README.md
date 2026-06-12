@@ -13,6 +13,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-blue.svg)](https://www.typescriptlang.org/)
 [![Node ≥20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![Coverage](https://codecov.io/gh/OTSkit/OTSkit-client/branch/main/graph/badge.svg)](https://codecov.io/gh/OTSkit/OTSkit-client)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=OTSkit_OTSkit-client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=OTSkit_OTSkit-client)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 `@otskit/client` is the official client SDK for submitting, upgrading, and verifying [OpenTimestamps](https://opentimestamps.org) proofs. It sits on top of [@otskit/core](https://github.com/OTSkit/OTSkit-core) — the low-level protocol engine — and wraps it in a high-level API with production-ready resilience patterns built in.
