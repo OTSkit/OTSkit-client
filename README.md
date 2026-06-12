@@ -34,14 +34,14 @@
 ### Developer Experience
 - **TypeScript-first** — Strict types throughout; full IntelliSense for every option and error
 - **Node.js 20+** — Requires Node.js; uses native `crypto`, `dns`, and `net` APIs not available in browsers or edge runtimes
-- **Tree-shakeable** — Dual ESM/CJS build, zero runtime dependencies
+- **Tree-shakeable** — Dual ESM/CJS build; `@otskit/core` is the only runtime dependency, no third-party packages
 - **`AbortController` support** — Cancel any in-flight operation at any level
 - **Observable** — Drop-in `Logger` interface compatible with `console`, `pino`, `winston`, etc.
 - **Built-in SHA-256 helpers** — `hashFile()` and `hashBuffer()` so you don't need to wire up `crypto` yourself
 
 ---
 
-> **Note on confirmation times:** After `stamp()`, the proof is `pending` — registered with calendar servers but not yet anchored to Bitcoin. Confirmations typically arrive within **10–60 minutes**, but can take **several hours** during periods of high network congestion. Call `upgrade()` periodically to check; an `UpgradeError` simply means the blockchain hasn't confirmed yet, not that anything went wrong.
+> **Note on confirmation times:** After `stamp()`, the proof is `pending` — registered with calendar servers but not yet anchored to Bitcoin. Confirmations typically arrive within **10–60 minutes**, but can take **several hours** during network congestion. Call `upgrade()` periodically to check; a pending proof is not a failed proof — an `UpgradeError` simply means the blockchain hasn't confirmed yet.
 
 ---
 
@@ -51,7 +51,7 @@
 npm install @otskit/client
 ```
 
-`@otskit/core` is a peer dependency bundled as a `file:` reference in monorepo setups; no separate install is needed.
+`@otskit/core` is a regular dependency and installs automatically; no separate install is needed.
 
 ---
 
@@ -559,7 +559,7 @@ This repository uses [Conventional Commits](https://www.conventionalcommits.org)
 - TypeScript strict mode
 - ESLint + Prettier (run `npm run format` before pushing)
 - Fail-closed: all external input is validated at the boundary
-- No runtime dependencies
+- No third-party runtime dependencies (`@otskit/core` is the only dependency)
 
 ---
 
@@ -572,4 +572,4 @@ This repository uses [Conventional Commits](https://www.conventionalcommits.org)
 
 ## License
 
-MIT
+MIT © OTSkit contributors — see [LICENSE](LICENSE).
