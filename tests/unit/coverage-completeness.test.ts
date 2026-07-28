@@ -47,14 +47,18 @@ describe('OpenTimestampsClient — utility methods', () => {
 
   it('resetCircuit with active logger — covers the logger?.info (true) branch', () => {
     const info = vi.fn()
-    const client = new OpenTimestampsClient({ logger: { debug: vi.fn(), info, warn: vi.fn(), error: vi.fn() } })
+    const client = new OpenTimestampsClient({
+      logger: { debug: vi.fn(), info, warn: vi.fn(), error: vi.fn() },
+    })
     client.resetCircuit('https://a.pool.opentimestamps.org')
     expect(info).toHaveBeenCalledWith(expect.stringContaining('Manually resetting'))
   })
 
   it('resetAllCircuits with active logger — covers the logger?.info (true) branch', () => {
     const info = vi.fn()
-    const client = new OpenTimestampsClient({ logger: { debug: vi.fn(), info, warn: vi.fn(), error: vi.fn() } })
+    const client = new OpenTimestampsClient({
+      logger: { debug: vi.fn(), info, warn: vi.fn(), error: vi.fn() },
+    })
     client.resetAllCircuits()
     expect(info).toHaveBeenCalledWith(expect.stringContaining('Manually resetting all'))
   })
@@ -153,7 +157,10 @@ describe('executeRequest — error branches', () => {
   })
 
   it('error with "timeout" in the message → NetworkError Request timeout', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(Object.assign(new Error('connection timeout'), {})))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(Object.assign(new Error('connection timeout'), {}))
+    )
     await expect(
       executeRequest({ url: 'https://example.com', method: 'GET' })
     ).rejects.toMatchObject({ message: 'Request timeout' })
@@ -273,7 +280,9 @@ describe('EsploraClient — logger?.debug (true branch)', () => {
       ...DEFAULT_RESILIENCE,
       retries: { ...DEFAULT_RESILIENCE.retries, enabled: false },
     })
-    server.use(http.get(`${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`, () => HttpResponse.text(BLOCKHASH)))
+    server.use(
+      http.get(`${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`, () => HttpResponse.text(BLOCKHASH))
+    )
     const client = new EsploraClient(layer, { logger })
     await client.blockHash(HEIGHT)
     expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('block-height'))
@@ -287,7 +296,12 @@ describe('EsploraClient — logger?.debug (true branch)', () => {
     })
     server.use(
       http.get(`${PUBLIC_ESPLORA_URL}/block/${BLOCKHASH}`, () =>
-        HttpResponse.json({ id: BLOCKHASH, height: HEIGHT, merkle_root: MERKLEROOT, timestamp: TIME })
+        HttpResponse.json({
+          id: BLOCKHASH,
+          height: HEIGHT,
+          merkle_root: MERKLEROOT,
+          timestamp: TIME,
+        })
       )
     )
     const client = new EsploraClient(layer, { logger })
@@ -298,6 +312,7 @@ describe('EsploraClient — logger?.debug (true branch)', () => {
 
 // ─── src/core/orchestration.ts — assertHttpUrl and empty-calendars branches ───
 import { orchestrateStamp } from '../../src/core/orchestration.js'
+import { assertSafeCalendarUrl } from '../../src/security/ssrf.js'
 
 describe('orchestrateStamp — direct validation branches', () => {
   const layer = new ResilientNetworkLayer({
@@ -305,27 +320,29 @@ describe('orchestrateStamp — direct validation branches', () => {
     retries: { ...DEFAULT_RESILIENCE.retries, enabled: false },
   })
   const hash = 'a'.repeat(64)
+  const validate = (url: string) => assertSafeCalendarUrl(url, { allowPrivate: false })
 
   it('empty calendars → ValidationError (defensive line)', async () => {
     const { ValidationError } = await import('../../src/errors.js')
-    await expect(orchestrateStamp(hash, [], layer, undefined, undefined, 1)).rejects.toBeInstanceOf(ValidationError)
+    await expect(
+      orchestrateStamp(hash, [], layer, validate, undefined, undefined, 1)
+    ).rejects.toBeInstanceOf(ValidationError)
   })
 
   it('malformed URL (new URL() catch) → ValidationError', async () => {
     const { ValidationError } = await import('../../src/errors.js')
     await expect(
-      orchestrateStamp(hash, ['not a valid url'], layer, undefined, undefined, 1)
+      orchestrateStamp(hash, ['not a valid url'], layer, validate, undefined, undefined, 1)
     ).rejects.toBeInstanceOf(ValidationError)
   })
 
   it('non-http(s) protocol URL (ftp://) → ValidationError', async () => {
     const { ValidationError } = await import('../../src/errors.js')
     await expect(
-      orchestrateStamp(hash, ['ftp://evil.example.com'], layer, undefined, undefined, 1)
+      orchestrateStamp(hash, ['ftp://evil.example.com'], layer, validate, undefined, undefined, 1)
     ).rejects.toBeInstanceOf(ValidationError)
   })
 })
-
 
 // ─── orchestration.ts — logger branches in verify ────────────────────────────
 import { FAKE_COMPLETE_OTS } from '../mocks/handlers.js'
@@ -344,7 +361,10 @@ describe('orchestrateVerify — logger branches', () => {
     const warn = vi.fn()
     const logger = { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() }
     server.use(
-      http.get('https://blockstream.info/api/block-height/:height', () => new HttpResponse(null, { status: 404 }))
+      http.get(
+        'https://blockstream.info/api/block-height/:height',
+        () => new HttpResponse(null, { status: 404 })
+      )
     )
     const client = new OpenTimestampsClient({ logger })
     const result = await client.verify(Buffer.from(FAKE_COMPLETE_OTS))
@@ -397,7 +417,10 @@ describe('ResilientNetworkLayer — logger branches', () => {
       http.post('https://failing.example.com/digest', () => new HttpResponse(null, { status: 503 }))
     )
     await expect(
-      layer.request('https://failing.example.com', { url: 'https://failing.example.com/digest', method: 'POST' })
+      layer.request('https://failing.example.com', {
+        url: 'https://failing.example.com/digest',
+        method: 'POST',
+      })
     ).rejects.toBeInstanceOf(NetworkError)
     expect(error).toHaveBeenCalledWith(expect.stringContaining('failed'), expect.anything())
   })
@@ -426,7 +449,15 @@ describe('withRetry — linear strategy with retry', () => {
     const logger = { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() }
     const fn = vi.fn().mockRejectedValue(new Error('always fails'))
     await expect(
-      withRetry(fn, { enabled: true, maxAttempts: 2, backoff: { strategy: 'constant', initialDelayMs: 1, jitter: 'none' } }, logger)
+      withRetry(
+        fn,
+        {
+          enabled: true,
+          maxAttempts: 2,
+          backoff: { strategy: 'constant', initialDelayMs: 1, jitter: 'none' },
+        },
+        logger
+      )
     ).rejects.toThrow()
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('attempts failed'))
   })
@@ -440,7 +471,15 @@ describe('withRetry — linear strategy with retry', () => {
       if (calls < 2) throw new Error('fail once')
       return Promise.resolve('ok')
     })
-    await withRetry(fn, { enabled: true, maxAttempts: 3, backoff: { strategy: 'constant', initialDelayMs: 1, jitter: 'none' } }, logger)
+    await withRetry(
+      fn,
+      {
+        enabled: true,
+        maxAttempts: 3,
+        backoff: { strategy: 'constant', initialDelayMs: 1, jitter: 'none' },
+      },
+      logger
+    )
     expect(debug).toHaveBeenCalledWith(expect.stringContaining('Retry attempt'))
   })
 })
@@ -448,18 +487,35 @@ describe('withRetry — linear strategy with retry', () => {
 // ─── orchestration.ts — logger?.info and logger?.warn in stamp ───────────────
 describe('orchestrateStamp — logger branches', () => {
   it('logger.info and logger.warn in stamp (partial success)', async () => {
-    const info = vi.fn(); const warn = vi.fn()
+    const info = vi.fn()
+    const warn = vi.fn()
     const logger = { debug: vi.fn(), info, warn, error: vi.fn() }
-    const layer = new ResilientNetworkLayer(
-      { ...DEFAULT_RESILIENCE, retries: { ...DEFAULT_RESILIENCE.retries, enabled: false } }
-    )
+    const layer = new ResilientNetworkLayer({
+      ...DEFAULT_RESILIENCE,
+      retries: { ...DEFAULT_RESILIENCE.retries, enabled: false },
+    })
     server.use(
-      http.post('https://bob.btc.calendar.opentimestamps.org/digest', () => new HttpResponse(null, { status: 503 }))
+      http.post(
+        'https://bob.btc.calendar.opentimestamps.org/digest',
+        () => new HttpResponse(null, { status: 503 })
+      )
     )
     const { orchestrateStamp: oStamp } = await import('../../src/core/orchestration.js')
     const hash = 'a'.repeat(64)
-    const proof = await oStamp(hash, ['https://alice.btc.calendar.opentimestamps.org', 'https://bob.btc.calendar.opentimestamps.org'], layer, logger, undefined, 1)
-    expect(Buffer.isBuffer(proof)).toBe(true)
+    const proof = await oStamp(
+      hash,
+      [
+        'https://alice.btc.calendar.opentimestamps.org',
+        'https://bob.btc.calendar.opentimestamps.org',
+      ],
+      layer,
+      (url) => assertSafeCalendarUrl(url, { allowPrivate: false }),
+      logger,
+      undefined,
+      1
+    )
+    expect(proof).toBeInstanceOf(Uint8Array)
+    expect(proof.length).toBeGreaterThan(0)
     expect(info).toHaveBeenCalledWith(expect.stringContaining('stamp'))
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Failed to submit'))
   })
@@ -471,12 +527,19 @@ describe('orchestrateUpgrade — additional branches', () => {
     const warn = vi.fn()
     const logger = { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() }
     server.use(
-      http.get('https://alice.btc.calendar.opentimestamps.org/timestamp/:hex', () => new HttpResponse(null, { status: 503 })),
-      http.get('https://bob.btc.calendar.opentimestamps.org/timestamp/:hex', () => new HttpResponse(null, { status: 503 }))
+      http.get(
+        'https://alice.btc.calendar.opentimestamps.org/timestamp/:hex',
+        () => new HttpResponse(null, { status: 503 })
+      ),
+      http.get(
+        'https://bob.btc.calendar.opentimestamps.org/timestamp/:hex',
+        () => new HttpResponse(null, { status: 503 })
+      )
     )
-    const layer = new ResilientNetworkLayer(
-      { ...DEFAULT_RESILIENCE, retries: { ...DEFAULT_RESILIENCE.retries, enabled: false } }
-    )
+    const layer = new ResilientNetworkLayer({
+      ...DEFAULT_RESILIENCE,
+      retries: { ...DEFAULT_RESILIENCE.retries, enabled: false },
+    })
     const { orchestrateUpgrade: oUp } = await import('../../src/core/orchestration.js')
     const { FAKE_INCOMPLETE_OTS: INC } = await import('../mocks/handlers.js')
     await expect(oUp(Buffer.from(INC), [], layer, logger)).rejects.toThrow()
@@ -498,12 +561,19 @@ describe('orchestrateUpgrade — additional branches', () => {
     const debug = vi.fn()
     const logger = { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn() }
     server.use(
-      http.get('https://alice.btc.calendar.opentimestamps.org/timestamp/:hex', () => new HttpResponse(null, { status: 404 })),
-      http.get('https://bob.btc.calendar.opentimestamps.org/timestamp/:hex', () => new HttpResponse(null, { status: 404 }))
+      http.get(
+        'https://alice.btc.calendar.opentimestamps.org/timestamp/:hex',
+        () => new HttpResponse(null, { status: 404 })
+      ),
+      http.get(
+        'https://bob.btc.calendar.opentimestamps.org/timestamp/:hex',
+        () => new HttpResponse(null, { status: 404 })
+      )
     )
-    const layer = new ResilientNetworkLayer(
-      { ...DEFAULT_RESILIENCE, retries: { ...DEFAULT_RESILIENCE.retries, enabled: false } }
-    )
+    const layer = new ResilientNetworkLayer({
+      ...DEFAULT_RESILIENCE,
+      retries: { ...DEFAULT_RESILIENCE.retries, enabled: false },
+    })
     const { orchestrateUpgrade: oUp } = await import('../../src/core/orchestration.js')
     const { FAKE_INCOMPLETE_OTS: INC } = await import('../mocks/handlers.js')
     await expect(oUp(Buffer.from(INC), [], layer, logger)).rejects.toThrow()
@@ -516,7 +586,12 @@ describe('orchestrateUpgrade — additional branches', () => {
     // Timestamp with unknown + pending: unknown is skipped, pending is queried
     const dtf2 = DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(32).fill(0x33))
     const sub = dtf2.timestamp.add(new OpSHA256())
-    sub.addAttestation(makeUnknown(new Uint8Array([0xde, 0xad, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]), new Uint8Array(0)))
+    sub.addAttestation(
+      makeUnknown(
+        new Uint8Array([0xde, 0xad, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
+        new Uint8Array(0)
+      )
+    )
     sub.addAttestation(makePending('https://alice.btc.calendar.opentimestamps.org'))
     const layer = new ResilientNetworkLayer(DEFAULT_RESILIENCE)
     const { orchestrateUpgrade: oUp } = await import('../../src/core/orchestration.js')

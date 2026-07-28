@@ -9,8 +9,13 @@ export class OpenTimestampsClientError extends Error {
   constructor(message: string, options?: { cause?: Error }) {
     super(message)
     this.name = this.constructor.name
-    if (options?.cause !== undefined) this.cause = options.cause
-    Error.captureStackTrace?.(this, this.constructor)
+    if (options?.cause !== undefined)
+      this.cause = options.cause
+      // captureStackTrace is a V8-only API absent from the DOM lib; access it defensively so the
+      // browser type-check (no @types/node) passes while staying a no-op in engines that lack it.
+    ;(
+      Error as { captureStackTrace?: (target: object, ctor?: unknown) => void }
+    ).captureStackTrace?.(this, this.constructor)
   }
 }
 
@@ -19,12 +24,12 @@ export class ValidationError extends OpenTimestampsClientError {}
 
 /** Error during stamp operation */
 export class StampError extends OpenTimestampsClientError {
-  public readonly successfulSubmissions: Array<{ calendar: string; proof?: Buffer }>
+  public readonly successfulSubmissions: Array<{ calendar: string; proof?: Uint8Array }>
   public readonly failedSubmissions: Array<{ calendar: string; error: Error }>
 
   constructor(
     message: string,
-    successful: Array<{ calendar: string; proof?: Buffer }>,
+    successful: Array<{ calendar: string; proof?: Uint8Array }>,
     failed: Array<{ calendar: string; error: Error }>,
     options?: { cause?: Error }
   ) {
@@ -69,12 +74,16 @@ export class SizeLimitExceededError extends NetworkError {
   public readonly maxBytes: number
   public readonly actualBytes?: number
 
-  constructor(maxBytes: number, actualBytes?: number, options?: { cause?: Error; status?: number }) {
+  constructor(
+    maxBytes: number,
+    actualBytes?: number,
+    options?: { cause?: Error; status?: number }
+  ) {
     super(
       actualBytes === undefined
         ? `Response size exceeds limit of ${maxBytes} bytes`
         : `Response size ${actualBytes} bytes exceeds limit of ${maxBytes} bytes`,
-      options,
+      options
     )
     this.maxBytes = maxBytes
     if (actualBytes !== undefined) this.actualBytes = actualBytes
