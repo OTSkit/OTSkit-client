@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/OTSkit/OTSkit-client/compare/v0.5.0...v0.6.0) (2026-07-28)
+
+
+### Features
+
+* **client:** add browser-safe @otskit/client/browser stamp entry ([#21](https://github.com/OTSkit/OTSkit-client/issues/21)) ([e19c17e](https://github.com/OTSkit/OTSkit-client/commit/e19c17eb57b564d8e14857a59efd57ad8d4f710f))
+
 # [0.5.0](https://github.com/OTSkit/OTSkit-client/compare/v0.4.0...v0.5.0) (2026-06-11)
 
 
