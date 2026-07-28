@@ -18,6 +18,12 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./browser": {
+      "import": {
+        "types": "./dist/browser.d.ts",
+        "default": "./dist/browser.js"
+      }
     }
   },
   "files": [
@@ -27,8 +33,9 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck:browser": "tsc -p tsconfig.browser.json",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "test:watch": "vitest",

@@ -34,7 +34,7 @@ function getDeclaredContentLength(response: Response): number | undefined {
 async function readStreamLimited(
   body: ReadableStream<Uint8Array>,
   maxBytes: number,
-  status: number,
+  status: number
 ): Promise<Uint8Array> {
   const reader = body.getReader()
   const buffer = new Uint8Array(maxBytes)
@@ -88,13 +88,13 @@ async function readResponseBody(response: Response, maxBytes: number): Promise<U
  */
 export async function executeRequest(
   request: FetchRequest,
-  maxBytes: number,
+  maxBytes: number
 ): Promise<FetchResponse> {
   try {
     const response = await globalThis.fetch(request.url, {
       method: request.method,
       headers: { 'Content-Type': 'application/octet-stream', ...request.headers },
-      ...(request.body !== undefined ? { body: request.body } : {}),
+      ...(request.body !== undefined ? { body: request.body as Uint8Array<ArrayBuffer> } : {}),
       ...(request.signal !== undefined ? { signal: request.signal } : {}),
       redirect: 'error',
     })
@@ -107,7 +107,8 @@ export async function executeRequest(
     if (error instanceof NetworkError) throw error
     if (error instanceof Error) {
       if (error.name === 'AbortError') throw new NetworkError('Request aborted', { cause: error })
-      if (error.message.includes('timeout')) throw new NetworkError('Request timeout', { cause: error })
+      if (error.message.includes('timeout'))
+        throw new NetworkError('Request timeout', { cause: error })
       throw new NetworkError(`Network request failed: ${error.message}`, { cause: error })
     }
     throw new NetworkError('Unknown network error')
@@ -118,7 +119,10 @@ export async function executeRequest(
  * Creates an AbortController with a timeout.
  * The child controller is aborted when `timeoutMs` elapses or when `parentSignal` is aborted.
  */
-export function createTimeoutController(timeoutMs: number, parentSignal?: AbortSignal): AbortController {
+export function createTimeoutController(
+  timeoutMs: number,
+  parentSignal?: AbortSignal
+): AbortController {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(new Error('Timeout')), timeoutMs)
 
@@ -128,10 +132,14 @@ export function createTimeoutController(timeoutMs: number, parentSignal?: AbortS
     controller.abort(parentSignal?.reason)
   }
 
-  controller.signal.addEventListener('abort', () => {
-    clearTimeout(timeout)
-    parentSignal?.removeEventListener('abort', onParentAbort)
-  }, { once: true })
+  controller.signal.addEventListener(
+    'abort',
+    () => {
+      clearTimeout(timeout)
+      parentSignal?.removeEventListener('abort', onParentAbort)
+    },
+    { once: true }
+  )
 
   if (parentSignal) {
     if (parentSignal.aborted) {
