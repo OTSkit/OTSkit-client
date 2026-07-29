@@ -1,3 +1,10 @@
+## [0.6.1](https://github.com/OTSkit/OTSkit-client/compare/v0.6.0...v0.6.1) (2026-07-29)
+
+
+### Bug Fixes
+
+* make on-chain verify work against the real Esplora API ([e5b2cd7](https://github.com/OTSkit/OTSkit-client/commit/e5b2cd75add702bbe25c431e76ecf389b59b3e50))
+
 # [0.6.0](https://github.com/OTSkit/OTSkit-client/compare/v0.5.0...v0.6.0) (2026-07-28)
 
 
