@@ -9,17 +9,15 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
       include: ['src/**'],
-      lines: 100,
-      branches: 100,
-      functions: 100,
-      statements: 100,
-      exclude: [
-        'node_modules/',
-        'dist/',
-        'tests/',
-        'vitest.config.ts',
-        'vitest.setup.ts',
-      ],
+      // Regression floor set just below the current measured coverage. Vitest 4 only reads these
+      // under `thresholds`; placed directly on `coverage` they are silently ignored.
+      thresholds: {
+        lines: 96,
+        branches: 90,
+        functions: 98,
+        statements: 95,
+      },
+      exclude: ['node_modules/', 'dist/', 'tests/', 'vitest.config.ts', 'vitest.setup.ts'],
     },
   },
 })

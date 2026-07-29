@@ -1,10 +1,12 @@
 /**
- * Browser entry for @otskit/client. Exposes only the stamp path (hash a file, submit to
- * calendars, get a pending .ots). upgrade/verify stay Node-only and are never imported here,
- * so node:crypto / node:dns / Esplora cannot reach the browser bundle.
+ * Browser entry for @otskit/client. Exposes the stamp path (hash a file, submit to calendars, get
+ * a pending .ots) and the upgrade path (query calendars to complete a pending .ots). verify stays
+ * Node-only and is never imported here, so node:crypto / node:dns / Esplora cannot reach the
+ * browser bundle.
  */
 import { ResilientNetworkLayer } from './network/resilience.js'
 import { orchestrateStamp } from './core/stamp.js'
+import { upgradeProofBytes } from './core/upgrade-core.js'
 import { assertSafeCalendarUrlStructural } from './security/ssrf-web.js'
 import { DEFAULT_RESILIENCE } from './types.js'
 import type { Logger } from './types.js'
@@ -51,5 +53,14 @@ export class OpenTimestampsBrowserClient {
       undefined,
       this.minSubs
     )
+  }
+
+  /**
+   * proof: a pending .ots as bytes. Queries the calendars it references (allowlisted) and returns
+   * the upgraded .ots. Throws UpgradeError if no calendar has confirmed the timestamp yet, which is
+   * the normal state until Bitcoin mines the commitment (typically an hour or more after stamping).
+   */
+  upgrade(proof: Uint8Array): Promise<Uint8Array> {
+    return upgradeProofBytes(proof, this.layer, this.logger)
   }
 }

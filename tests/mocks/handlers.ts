@@ -35,7 +35,7 @@ function serializeTimestamp(ts: Timestamp): Uint8Array {
 }
 
 /** PENDING calendar response (not yet confirmed) committed to `commitment`. */
-function pendingResponseFor(commitment: Uint8Array, uri: string): Uint8Array {
+export function pendingResponseFor(commitment: Uint8Array, uri: string): Uint8Array {
   const ts = new Timestamp(commitment)
   ts.addAttestation(makePending(uri))
   return serializeTimestamp(ts)
