@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/OTSkit/OTSkit-client/compare/v0.6.1...v0.7.0) (2026-07-29)
+
+
+### Features
+
+* **client:** expose upgrade() in the browser entry ([e9ca336](https://github.com/OTSkit/OTSkit-client/commit/e9ca3363230183348f07259339fcb657c8947f0b))
+
 ## [0.6.1](https://github.com/OTSkit/OTSkit-client/compare/v0.6.0...v0.6.1) (2026-07-29)
 
 
