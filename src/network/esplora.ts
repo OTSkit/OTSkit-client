@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto'
 import { verifyAgainstRawHeader, VerificationError } from '@otskit/core'
 import type { Attestation, BlockHeader } from '@otskit/core'
 import { ResilientNetworkLayer } from './resilience.js'
+import { hexToBytes } from '../utils/hex.js'
 import { Logger } from '../types.js'
 import { EsploraResponseError, ValidationError } from '../errors.js'
 
@@ -122,10 +123,21 @@ export class EsploraClient {
     this.#logger?.debug(`Esplora raw header ${hash}`)
     const response = await this.#networkLayer.request(
       this.#url,
-      { url: `${this.#url}/block/${hash}/header`, method: 'GET', headers: { Accept: 'application/octet-stream' } },
+      { url: `${this.#url}/block/${hash}/header`, method: 'GET', headers: { Accept: 'text/plain' } },
       signal,
     )
-    const data = response.data
+    // Esplora serves the raw header as a hex string (160 chars), not binary bytes,
+    // ignoring the requested Accept type. Decode it before checking the 80-byte size
+    // and before self-authentication, both of which operate on the decoded header.
+    const hex = this.#decode(response.data).trim()
+    let data: Uint8Array
+    try {
+      data = hexToBytes(hex)
+    } catch (cause) {
+      throw new EsploraResponseError('esplora returned a non-hex raw block header', {
+        ...(cause instanceof Error ? { cause } : {}),
+      })
+    }
     if (data.length !== RAW_HEADER_SIZE) {
       throw new EsploraResponseError(
         `raw block header must be ${RAW_HEADER_SIZE} bytes; got ${data.length}`,

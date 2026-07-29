@@ -77,7 +77,8 @@ completeLeaf.addAttestation(makeBitcoin(BITCOIN_HEIGHT))
 export const FAKE_COMPLETE_OTS: Uint8Array = complete.serializeToBytes()
 
 // Raw block header for the complete fixture.
-// Merkle root at bytes 36..68 = leaf digest reversed (internal Bitcoin byte order).
+// Merkle root at bytes 36..68 = leaf digest as-is: real block headers store the merkle
+// root in the same internal byte order as the OTS tree digest.
 // sha256d(header) reversed = block hash (self-authenticating, mirrors real Bitcoin).
 const sha256d = (data: Uint8Array): Uint8Array => {
   const first = createHash('sha256').update(data).digest()
@@ -85,14 +86,16 @@ const sha256d = (data: Uint8Array): Uint8Array => {
 }
 export const COMPLETE_RAW_HEADER: Uint8Array = (() => {
   const h = new Uint8Array(80)
-  h.set(Uint8Array.from(completeLeaf.getDigest()).reverse(), 36)
+  h.set(Uint8Array.from(completeLeaf.getDigest()), 36)
   h[68] = BLOCK_TIME & 0xff
   h[69] = (BLOCK_TIME >> 8) & 0xff
   h[70] = (BLOCK_TIME >> 16) & 0xff
   h[71] = (BLOCK_TIME >> 24) & 0xff
   return h
 })()
-export const COMPLETE_BLOCK_HASH: string = Buffer.from(sha256d(COMPLETE_RAW_HEADER)).reverse().toString('hex')
+export const COMPLETE_BLOCK_HASH: string = Buffer.from(sha256d(COMPLETE_RAW_HEADER))
+  .reverse()
+  .toString('hex')
 
 export { BITCOIN_HEIGHT, BLOCK_TIME }
 
@@ -111,17 +114,16 @@ export const handlers = [
       return otsResponse(pendingResponseFor(commitment, url))
     })
   ),
-  // Esplora — block-height (text), raw header (octet-stream, self-authenticating).
+  // Esplora — block-height (text), raw header as a hex string (matches the real API,
+  // which serves this endpoint as text/plain hex, not binary), self-authenticating.
   http.get('https://blockstream.info/api/block-height/:height', ({ params }) => {
-    if (String(params.height) === String(BITCOIN_HEIGHT)) return HttpResponse.text(COMPLETE_BLOCK_HASH)
+    if (String(params.height) === String(BITCOIN_HEIGHT))
+      return HttpResponse.text(COMPLETE_BLOCK_HASH)
     return new HttpResponse(null, { status: 404 })
   }),
   http.get('https://blockstream.info/api/block/:hash/header', ({ params }) => {
     if (String(params.hash) === COMPLETE_BLOCK_HASH) {
-      return new HttpResponse(COMPLETE_RAW_HEADER, {
-        status: 200,
-        headers: { 'Content-Type': 'application/octet-stream' },
-      })
+      return HttpResponse.text(bytesToHex(COMPLETE_RAW_HEADER))
     }
     return new HttpResponse(null, { status: 404 })
   }),

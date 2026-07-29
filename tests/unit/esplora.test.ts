@@ -133,11 +133,12 @@ function makeRawHeader(merkleRoot: Uint8Array, time: number): { header: Uint8Arr
 }
 
 describe('EsploraClient.rawBlockHeader', () => {
+  // Esplora serves this endpoint as a hex string, so every fixture is wired as hex text.
   it('GET /block/{hash}/header → 80-byte header (self-authenticated)', async () => {
     const { header, hash } = makeRawHeader(DIGEST, TIME)
     server.use(
       http.get(`${PUBLIC_ESPLORA_URL}/block/${hash}/header`, () =>
-        new HttpResponse(header, { status: 200, headers: { 'Content-Type': 'application/octet-stream' } })
+        HttpResponse.text(Buffer.from(header).toString('hex'))
       )
     )
     const result = await newClient().rawBlockHeader(hash)
@@ -150,7 +151,7 @@ describe('EsploraClient.rawBlockHeader', () => {
     tampered[0] ^= 0xff // flip one byte
     server.use(
       http.get(`${PUBLIC_ESPLORA_URL}/block/${hash}/header`, () =>
-        new HttpResponse(tampered, { status: 200, headers: { 'Content-Type': 'application/octet-stream' } })
+        HttpResponse.text(Buffer.from(tampered).toString('hex'))
       )
     )
     await expect(newClient().rawBlockHeader(hash)).rejects.toBeInstanceOf(EsploraResponseError)
@@ -160,8 +161,16 @@ describe('EsploraClient.rawBlockHeader', () => {
     const { hash } = makeRawHeader(DIGEST, TIME)
     server.use(
       http.get(`${PUBLIC_ESPLORA_URL}/block/${hash}/header`, () =>
-        new HttpResponse(new Uint8Array(79), { status: 200, headers: { 'Content-Type': 'application/octet-stream' } })
+        HttpResponse.text(Buffer.from(new Uint8Array(79)).toString('hex'))
       )
+    )
+    await expect(newClient().rawBlockHeader(hash)).rejects.toBeInstanceOf(EsploraResponseError)
+  })
+
+  it('non-hex body → EsploraResponseError', async () => {
+    const { hash } = makeRawHeader(DIGEST, TIME)
+    server.use(
+      http.get(`${PUBLIC_ESPLORA_URL}/block/${hash}/header`, () => HttpResponse.text('not hex at all'))
     )
     await expect(newClient().rawBlockHeader(hash)).rejects.toBeInstanceOf(EsploraResponseError)
   })
@@ -179,7 +188,7 @@ describe('verifyTimestampAttestation', () => {
     server.use(
       http.get(`${baseUrl}/block-height/${HEIGHT}`, () => HttpResponse.text(hash)),
       http.get(`${baseUrl}/block/${hash}/header`, () =>
-        new HttpResponse(header, { status: 200, headers: { 'Content-Type': 'application/octet-stream' } })
+        HttpResponse.text(Buffer.from(header).toString('hex'))
       )
     )
   }

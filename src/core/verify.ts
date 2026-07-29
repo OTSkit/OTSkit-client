@@ -107,18 +107,14 @@ export async function orchestrateVerify(
   let lastNetworkError: string | undefined
   let lastCryptoError: string | undefined
 
-  // Try ALL Bitcoin attestations: valid if ANY of them verifies. Bitcoin's merkle root is
-  // big-endian, so we reverse the tree digest before verifying.
+  // Try ALL Bitcoin attestations: valid if ANY of them verifies. The raw block header
+  // stores the merkle root in the same internal byte order as the OTS tree digest, so
+  // the digest is compared against the header as-is (no reversal).
   for (const { msg, attestation } of bitcoinAtts) {
     /* v8 ignore next */
     if (attestation.kind !== 'bitcoin') continue
     try {
-      const blockTime = await verifyTimestampAttestation(
-        Uint8Array.from(msg).reverse(),
-        attestation,
-        explorer,
-        signal
-      )
+      const blockTime = await verifyTimestampAttestation(msg, attestation, explorer, signal)
       logger?.info(`Verified against Bitcoin block ${attestation.height}`)
       return { status: 'verified', blockHeight: attestation.height, blockTime }
     } catch (err) {
