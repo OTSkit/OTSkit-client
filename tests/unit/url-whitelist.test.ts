@@ -9,6 +9,24 @@ describe('UrlWhitelist', () => {
     expect(wl.contains('https://calendar.opentimestamps.org')).toBe(false)
   })
 
+  it('accepts the real OTS calendars through the wildcard patterns', () => {
+    // Guards against the whitelist rejecting every calendar. In browsers the URL parser encodes
+    // the pattern's '*' as %2A; parseWhitelistPattern decodes it so these still match there too.
+    for (const url of [
+      'https://alice.btc.calendar.opentimestamps.org',
+      'https://bob.btc.calendar.opentimestamps.org',
+      'https://finney.calendar.eternitywall.com',
+      'https://btc.calendar.catallaxy.com',
+    ]) {
+      expect(DEFAULT_CALENDAR_WHITELIST.contains(url)).toBe(true)
+    }
+  })
+
+  it('a percent-encoded wildcard host (as browsers produce) still behaves as a wildcard', () => {
+    const wl = new UrlWhitelist(['https://%2A.calendar.opentimestamps.org'])
+    expect(wl.contains('https://bob.calendar.opentimestamps.org')).toBe(true)
+  })
+
   it('rejects known bypasses: query suffix, dot-suffix, and sub-subdomain', () => {
     const wl = new UrlWhitelist(['https://*.calendar.opentimestamps.org'])
     expect(wl.contains('https://evil.com?foo=alice.btc.calendar.opentimestamps.org')).toBe(false)

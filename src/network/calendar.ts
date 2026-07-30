@@ -110,7 +110,9 @@ function parseWhitelistPattern(raw: string): WhitelistPattern | undefined {
 
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
 
-  const hostname = parsed.hostname.toLowerCase()
+  // The WHATWG URL parser (browsers) percent-encodes '*' in the host as %2A, while Node keeps it
+  // literal. Decode it back so wildcard patterns like "https://*.calendar.example" work in both.
+  const hostname = parsed.hostname.toLowerCase().replaceAll('%2a', '*')
   const wildcardSuffix = hostname.startsWith('*.') ? hostname.slice(2) : undefined
 
   // A hostname wildcard is intentionally narrow: one DNS label only, never a URL glob.
