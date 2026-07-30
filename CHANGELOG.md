@@ -1,3 +1,10 @@
+## [0.7.1](https://github.com/OTSkit/OTSkit-client/compare/v0.7.0...v0.7.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **client:** decode %2A so the wildcard calendar allowlist works in browsers ([4c4c5d5](https://github.com/OTSkit/OTSkit-client/commit/4c4c5d5d612aed59cc7b8e37f2bebfee2acf79a3))
+
 # [0.7.0](https://github.com/OTSkit/OTSkit-client/compare/v0.6.1...v0.7.0) (2026-07-29)
 
 
