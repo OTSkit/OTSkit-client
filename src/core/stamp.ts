@@ -35,7 +35,32 @@ export async function orchestrateStamp(
       `minimumSuccessfulSubmissions (${minimumSuccessfulSubmissions}) cannot exceed the number of calendars (${calendars.length})`
     )
   }
-  await Promise.all(calendars.map((url) => validateCalendarUrl(url)))
+  // A calendar that fails validation is never contacted, but it must not sink the others:
+  // one unresolvable hostname used to abort the whole stamp even when the rest could have met
+  // the threshold. Each rejection still fails closed for that single calendar.
+  const validations = await Promise.allSettled(calendars.map((url) => validateCalendarUrl(url)))
+  const usable: string[] = []
+  const unusable: Array<{ calendar: string; error: Error }> = []
+  validations.forEach((v, i) => {
+    const calendar = calendars[i]!
+    if (v.status === 'fulfilled') {
+      usable.push(calendar)
+      return
+    }
+    const error = v.reason instanceof Error ? v.reason : new Error(String(v.reason))
+    unusable.push({ calendar, error })
+    logger?.warn(`Skipping calendar ${calendar}: ${error.message}`)
+  })
+  if (usable.length === 0) {
+    throw unusable[0]!.error
+  }
+  if (usable.length < minimumSuccessfulSubmissions) {
+    throw new StampError(
+      `Insufficient usable calendars (${usable.length}/${minimumSuccessfulSubmissions} required)`,
+      [],
+      unusable
+    )
+  }
 
   const digest = validateHash(hash)
   logger?.info(`Starting stamp for ${bytesToHex(digest)}`)
@@ -46,15 +71,15 @@ export async function orchestrateStamp(
   const merkleTip = makeMerkleTree([merkleRoot])
 
   const results = await Promise.allSettled(
-    calendars.map((url) =>
+    usable.map((url) =>
       new CalendarClient(url, networkLayer, logger).submit(merkleTip.getDigest(), signal)
     )
   )
 
   const successful: Array<{ calendar: string }> = []
-  const failed: Array<{ calendar: string; error: Error }> = []
+  const failed: Array<{ calendar: string; error: Error }> = [...unusable]
   results.forEach((r, i) => {
-    const calendar = calendars[i]!
+    const calendar = usable[i]!
     if (r.status === 'fulfilled') {
       merkleTip.merge(r.value)
       successful.push({ calendar })

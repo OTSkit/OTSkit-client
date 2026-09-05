@@ -10,6 +10,7 @@ import { EsploraClient, verifyTimestampAttestation } from '../network/esplora.js
 import { ValidationError, NetworkError, EsploraResponseError } from '../errors.js'
 import { Logger, VerificationResult } from '../types.js'
 import { validateHash } from './shared.js'
+import { bytesToHex } from '../utils/hex.js'
 
 /** Maximum number of Bitcoin attestations to verify per proof. */
 export const MAX_BITCOIN_ATTESTATIONS = 10
@@ -68,15 +69,18 @@ export async function orchestrateVerify(
     .allAttestations()
     .filter(({ attestation }) => attestation.kind === 'bitcoin')
 
-  // Deduplicate by height: two attestations at the same block would make identical HTTP calls.
-  const seenHeights = new Set<number>()
-  const deduped = allBitcoin.filter(({ attestation }) => {
+  // Deduplicate by height AND commitment: several calendars can anchor in the same block by
+  // different merkle paths, so the height alone does not identify an attestation. Keying on it
+  // would discard a valid branch without ever checking it.
+  const seen = new Set<string>()
+  const deduped = allBitcoin.filter(({ msg, attestation }) => {
     if (attestation.kind !== 'bitcoin') return false
-    if (seenHeights.has(attestation.height)) {
+    const key = `${attestation.height}:${bytesToHex(msg)}`
+    if (seen.has(key)) {
       logger?.debug(`Skipping duplicate Bitcoin attestation at height ${attestation.height}`)
       return false
     }
-    seenHeights.add(attestation.height)
+    seen.add(key)
     return true
   })
 
