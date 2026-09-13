@@ -6,7 +6,12 @@ import {
   PUBLIC_ESPLORA_URL,
   MAX_ESPLORA_RESPONSE_SIZE,
 } from '../../src/network/esplora.js'
-import { EsploraResponseError, NetworkError, SizeLimitExceededError, ValidationError } from '../../src/errors.js'
+import {
+  EsploraResponseError,
+  NetworkError,
+  SizeLimitExceededError,
+  ValidationError,
+} from '../../src/errors.js'
 import { ResilientNetworkLayer } from '../../src/network/resilience.js'
 import { DEFAULT_RESILIENCE } from '../../src/types.js'
 
@@ -57,7 +62,10 @@ describe('EsploraClient.blockHash', () => {
 
   it('404 from the explorer → NetworkError (not a silent EsploraResponseError)', async () => {
     server.use(
-      http.get(`${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`, () => new HttpResponse(null, { status: 404 }))
+      http.get(
+        `${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`,
+        () => new HttpResponse(null, { status: 404 })
+      )
     )
     await expect(newClient().blockHash(HEIGHT)).rejects.toBeInstanceOf(NetworkError)
   })
@@ -67,7 +75,9 @@ describe('EsploraClient.block', () => {
   const okBody = { id: BLOCKHASH, height: HEIGHT, merkle_root: MERKLEROOT, timestamp: TIME }
 
   it('GET /block/{hash} → { merkleroot, time }', async () => {
-    server.use(http.get(`${PUBLIC_ESPLORA_URL}/block/${BLOCKHASH}`, () => HttpResponse.json(okBody)))
+    server.use(
+      http.get(`${PUBLIC_ESPLORA_URL}/block/${BLOCKHASH}`, () => HttpResponse.json(okBody))
+    )
     expect(await newClient().block(BLOCKHASH)).toEqual({ merkleroot: MERKLEROOT, time: TIME })
   })
 
@@ -79,7 +89,11 @@ describe('EsploraClient.block', () => {
   )
 
   it('non-JSON body → EsploraResponseError', async () => {
-    server.use(http.get(`${PUBLIC_ESPLORA_URL}/block/${BLOCKHASH}`, () => HttpResponse.text('<html>oops</html>')))
+    server.use(
+      http.get(`${PUBLIC_ESPLORA_URL}/block/${BLOCKHASH}`, () =>
+        HttpResponse.text('<html>oops</html>')
+      )
+    )
     await expect(newClient().block(BLOCKHASH)).rejects.toBeInstanceOf(EsploraResponseError)
   })
 
@@ -170,17 +184,16 @@ describe('EsploraClient.rawBlockHeader', () => {
   it('non-hex body → EsploraResponseError', async () => {
     const { hash } = makeRawHeader(DIGEST, TIME)
     server.use(
-      http.get(`${PUBLIC_ESPLORA_URL}/block/${hash}/header`, () => HttpResponse.text('not hex at all'))
+      http.get(`${PUBLIC_ESPLORA_URL}/block/${hash}/header`, () =>
+        HttpResponse.text('not hex at all')
+      )
     )
     await expect(newClient().rawBlockHeader(hash)).rejects.toBeInstanceOf(EsploraResponseError)
   })
 
-  it.each(['zz', 'a'.repeat(63), ''])(
-    'invalid hash (%p) → ValidationError',
-    async (h) => {
-      await expect(newClient().rawBlockHeader(h)).rejects.toBeInstanceOf(ValidationError)
-    }
-  )
+  it.each(['zz', 'a'.repeat(63), ''])('invalid hash (%p) → ValidationError', async (h) => {
+    await expect(newClient().rawBlockHeader(h)).rejects.toBeInstanceOf(ValidationError)
+  })
 })
 
 describe('verifyTimestampAttestation', () => {
@@ -220,7 +233,11 @@ describe('verifyTimestampAttestation', () => {
 
   it('pending attestation is not on-chain verifiable → throws', async () => {
     await expect(
-      verifyTimestampAttestation(DIGEST, makePending('https://a.pool.opentimestamps.org'), newClient())
+      verifyTimestampAttestation(
+        DIGEST,
+        makePending('https://a.pool.opentimestamps.org'),
+        newClient()
+      )
     ).rejects.toThrow(/cannot verify/)
   })
 })
@@ -230,15 +247,21 @@ describe('EsploraClient — UTF-8 decoding', () => {
     // 0xFF is invalid in UTF-8; with fatal:false it would be silently replaced,
     // but with fatal:true it must throw an explicit EsploraResponseError.
     server.use(
-      http.get(`${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`, () =>
-        new HttpResponse(new Uint8Array([0x61, 0xFF, 0x62]), {
-          status: 200,
-          headers: { 'Content-Type': 'text/plain' },
-        })
+      http.get(
+        `${PUBLIC_ESPLORA_URL}/block-height/${HEIGHT}`,
+        () =>
+          new HttpResponse(new Uint8Array([0x61, 0xff, 0x62]), {
+            status: 200,
+            headers: { 'Content-Type': 'text/plain' },
+          })
       )
     )
     let error: unknown
-    try { await newClient().blockHash(HEIGHT) } catch (e) { error = e }
+    try {
+      await newClient().blockHash(HEIGHT)
+    } catch (e) {
+      error = e
+    }
     expect(error).toBeInstanceOf(EsploraResponseError)
     expect((error as Error).message).toContain('invalid UTF-8')
   })
@@ -246,7 +269,9 @@ describe('EsploraClient — UTF-8 decoding', () => {
 
 describe('EsploraClient — base URL validation', () => {
   it('rejects a non-http(s) base URL', () => {
-    expect(() => new EsploraClient(newLayer(), { url: 'ftp://example.com' })).toThrow(ValidationError)
+    expect(() => new EsploraClient(newLayer(), { url: 'ftp://example.com' })).toThrow(
+      ValidationError
+    )
   })
   it('rejects a malformed base URL', () => {
     expect(() => new EsploraClient(newLayer(), { url: 'not a url' })).toThrow(ValidationError)

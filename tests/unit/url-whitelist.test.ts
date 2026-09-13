@@ -97,8 +97,12 @@ describe('UrlWhitelist', () => {
   })
 
   it('default allowlist accepts the required official calendars', () => {
-    expect(DEFAULT_CALENDAR_WHITELIST.contains('https://alice.btc.calendar.opentimestamps.org')).toBe(true)
-    expect(DEFAULT_CALENDAR_WHITELIST.contains('https://finney.calendar.eternitywall.com')).toBe(true)
+    expect(
+      DEFAULT_CALENDAR_WHITELIST.contains('https://alice.btc.calendar.opentimestamps.org')
+    ).toBe(true)
+    expect(DEFAULT_CALENDAR_WHITELIST.contains('https://finney.calendar.eternitywall.com')).toBe(
+      true
+    )
   })
 
   it('host matching is case-insensitive', () => {

@@ -67,8 +67,12 @@ export class EsploraClient {
     this.#logger?.debug(`Esplora block-height ${height}`)
     const response = await this.#networkLayer.request(
       this.#url,
-      { url: `${this.#url}/block-height/${height}`, method: 'GET', headers: { Accept: 'text/plain' } },
-      signal,
+      {
+        url: `${this.#url}/block-height/${height}`,
+        method: 'GET',
+        headers: { Accept: 'text/plain' },
+      },
+      signal
     )
     const text = this.#decode(response.data).trim()
     if (!HEX64_RE.test(text)) {
@@ -86,7 +90,7 @@ export class EsploraClient {
     const response = await this.#networkLayer.request(
       this.#url,
       { url: `${this.#url}/block/${hash}`, method: 'GET', headers: { Accept: 'application/json' } },
-      signal,
+      signal
     )
     const text = this.#decode(response.data)
     let body: unknown
@@ -123,8 +127,12 @@ export class EsploraClient {
     this.#logger?.debug(`Esplora raw header ${hash}`)
     const response = await this.#networkLayer.request(
       this.#url,
-      { url: `${this.#url}/block/${hash}/header`, method: 'GET', headers: { Accept: 'text/plain' } },
-      signal,
+      {
+        url: `${this.#url}/block/${hash}/header`,
+        method: 'GET',
+        headers: { Accept: 'text/plain' },
+      },
+      signal
     )
     // Esplora serves the raw header as a hex string (160 chars), not binary bytes,
     // ignoring the requested Accept type. Decode it before checking the 80-byte size
@@ -140,14 +148,14 @@ export class EsploraClient {
     }
     if (data.length !== RAW_HEADER_SIZE) {
       throw new EsploraResponseError(
-        `raw block header must be ${RAW_HEADER_SIZE} bytes; got ${data.length}`,
+        `raw block header must be ${RAW_HEADER_SIZE} bytes; got ${data.length}`
       )
     }
     // Self-authenticate: sha256d(rawHeader) reversed == display block hash.
     const actualHash = sha256dDisplayHex(data)
     if (actualHash !== hash.toLowerCase()) {
       throw new EsploraResponseError(
-        `raw block header hash mismatch: expected ${hash.toLowerCase()}, got ${actualHash}`,
+        `raw block header hash mismatch: expected ${hash.toLowerCase()}, got ${actualHash}`
       )
     }
     return data
@@ -157,7 +165,7 @@ export class EsploraClient {
   #decode(data: Uint8Array): string {
     if (data.length > MAX_ESPLORA_RESPONSE_SIZE) {
       throw new EsploraResponseError(
-        `esplora response of ${data.length} bytes exceeds limit ${MAX_ESPLORA_RESPONSE_SIZE}`,
+        `esplora response of ${data.length} bytes exceeds limit ${MAX_ESPLORA_RESPONSE_SIZE}`
       )
     }
     // fatal: true — the Esplora API is pure ASCII; non-UTF-8 bytes indicate a corrupted
@@ -185,10 +193,12 @@ export async function verifyTimestampAttestation(
   digest: Uint8Array,
   attestation: Attestation,
   explorer: EsploraClient,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<number> {
   if (attestation.kind !== 'bitcoin' && attestation.kind !== 'litecoin') {
-    throw new VerificationError(`cannot verify a '${attestation.kind}' attestation against the chain`)
+    throw new VerificationError(
+      `cannot verify a '${attestation.kind}' attestation against the chain`
+    )
   }
   const hash = await explorer.blockHash(attestation.height, signal)
   // Raw 80-byte header is self-authenticating: sha256d(header) == block hash.
