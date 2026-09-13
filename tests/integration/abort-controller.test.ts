@@ -25,7 +25,6 @@ function pendingOtsResponse(body: ArrayBuffer): ArrayBuffer {
 }
 
 describe('AbortController Integration', () => {
-
   describe('stamp() cancellation', () => {
     it('should abort stamp operation when signal is aborted', async () => {
       const client = localClient({
@@ -47,9 +46,7 @@ describe('AbortController Integration', () => {
       // Abort after 100ms
       setTimeout(() => controller.abort(), 100)
 
-      await expect(
-        client.stamp(hash, { signal: controller.signal })
-      ).rejects.toThrow()
+      await expect(client.stamp(hash, { signal: controller.signal })).rejects.toThrow()
     })
 
     it('should abort stamp operation mid-flight across multiple calendars', async () => {
@@ -75,9 +72,7 @@ describe('AbortController Integration', () => {
       // Abort after 200ms
       setTimeout(() => controller.abort(), 200)
 
-      await expect(
-        client.stamp(hash, { signal: controller.signal })
-      ).rejects.toThrow()
+      await expect(client.stamp(hash, { signal: controller.signal })).rejects.toThrow()
     })
 
     it('should not abort if signal is never triggered', async () => {
@@ -122,9 +117,7 @@ describe('AbortController Integration', () => {
       // Abort after 100ms
       setTimeout(() => controller.abort(), 100)
 
-      await expect(
-        client.upgrade(proof, { signal: controller.signal })
-      ).rejects.toThrow()
+      await expect(client.upgrade(proof, { signal: controller.signal })).rejects.toThrow()
     })
 
     it('should handle pre-aborted signal gracefully', async () => {
@@ -135,9 +128,7 @@ describe('AbortController Integration', () => {
       // Abort BEFORE calling upgrade
       controller.abort()
 
-      await expect(
-        client.upgrade(proof, { signal: controller.signal })
-      ).rejects.toThrow()
+      await expect(client.upgrade(proof, { signal: controller.signal })).rejects.toThrow()
     })
   })
 
@@ -160,9 +151,7 @@ describe('AbortController Integration', () => {
       const hash = 'd'.repeat(64)
 
       // With a pre-aborted signal or invalid proof, verify() throws (ValidationError or abort)
-      await expect(
-        client.verify(proof, hash)
-      ).rejects.toThrow()
+      await expect(client.verify(proof, hash)).rejects.toThrow()
     })
   })
 
@@ -244,9 +233,7 @@ describe('AbortController Integration', () => {
       // Abort parent signal after 100ms
       setTimeout(() => parentController.abort(), 100)
 
-      await expect(
-        client.stamp(hash, { signal: parentController.signal })
-      ).rejects.toThrow()
+      await expect(client.stamp(hash, { signal: parentController.signal })).rejects.toThrow()
 
       // Note: Request count might be 0 if abort happens before fetch starts
       // Just verify the operation was aborted
@@ -274,9 +261,7 @@ describe('AbortController Integration', () => {
       controller1.abort()
 
       // First should fail
-      await expect(
-        client.stamp(hash1, { signal: controller1.signal })
-      ).rejects.toThrow()
+      await expect(client.stamp(hash1, { signal: controller1.signal })).rejects.toThrow()
 
       // Second should succeed
       const result = await client.stamp(hash2, { signal: controller2.signal })
@@ -317,9 +302,7 @@ describe('AbortController Integration', () => {
       // Abort after 500ms (should allow 2-3 attempts with 200ms delay)
       setTimeout(() => controller.abort(), 500)
 
-      await expect(
-        client.stamp(hash, { signal: controller.signal })
-      ).rejects.toThrow()
+      await expect(client.stamp(hash, { signal: controller.signal })).rejects.toThrow()
 
       // Should have attempted less than max attempts due to abort
       expect(attemptCount).toBeLessThan(10)
@@ -344,9 +327,7 @@ describe('AbortController Integration', () => {
 
       setTimeout(() => controller.abort(), 100)
 
-      await expect(
-        client.stamp(hash, { signal: controller.signal })
-      ).rejects.toThrow()
+      await expect(client.stamp(hash, { signal: controller.signal })).rejects.toThrow()
 
       // Subsequent operations should work normally (no resource leaks)
       const controller2 = new AbortController()

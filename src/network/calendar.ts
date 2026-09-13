@@ -40,7 +40,7 @@ export class CalendarClient {
   constructor(
     private readonly url: string,
     private readonly networkLayer: ResilientNetworkLayer,
-    private readonly logger?: Logger,
+    private readonly logger?: Logger
   ) {}
 
   /** Submits a digest to the calendar and returns the Timestamp that commits to it. */
@@ -50,7 +50,7 @@ export class CalendarClient {
     const response = await this.networkLayer.request(
       this.url,
       { url: joinUrl(this.url, '/digest'), method: 'POST', headers: OTS_HEADERS, body: digest },
-      signal,
+      signal
     )
     return this.#parseTimestamp(response.data, digest)
   }
@@ -65,13 +65,16 @@ export class CalendarClient {
       response = await this.networkLayer.request(
         this.url,
         { url: joinUrl(this.url, path), method: 'GET', headers: OTS_HEADERS },
-        signal,
+        signal
       )
     } catch (err) {
       if (err instanceof NetworkError && err.status === 404) {
-        throw new CommitmentNotFoundError(`calendar ${this.url} has no timestamp for the commitment yet`, {
-          cause: err,
-        })
+        throw new CommitmentNotFoundError(
+          `calendar ${this.url} has no timestamp for the commitment yet`,
+          {
+            cause: err,
+          }
+        )
       }
       throw err
     }
@@ -82,7 +85,7 @@ export class CalendarClient {
   #parseTimestamp(data: Uint8Array, commitment: Uint8Array): Timestamp {
     if (data.length > MAX_CALENDAR_RESPONSE_SIZE) {
       throw new CalendarResponseTooLargeError(
-        `calendar response of ${data.length} bytes exceeds limit ${MAX_CALENDAR_RESPONSE_SIZE}`,
+        `calendar response of ${data.length} bytes exceeds limit ${MAX_CALENDAR_RESPONSE_SIZE}`
       )
     }
     const ctx = new StreamDeserializationContext(data)
@@ -117,7 +120,8 @@ function parseWhitelistPattern(raw: string): WhitelistPattern | undefined {
 
   // A hostname wildcard is intentionally narrow: one DNS label only, never a URL glob.
   if (hostname.includes('*') && wildcardSuffix === undefined) return undefined
-  if (wildcardSuffix !== undefined && (wildcardSuffix.length === 0 || wildcardSuffix.includes('*'))) return undefined
+  if (wildcardSuffix !== undefined && (wildcardSuffix.length === 0 || wildcardSuffix.includes('*')))
+    return undefined
 
   return {
     protocol: parsed.protocol,

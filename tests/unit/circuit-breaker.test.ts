@@ -34,9 +34,9 @@ describe('CircuitBreaker', () => {
     }
 
     // 4th attempt should be rejected immediately
-    await expect(
-      breaker.execute('test-key', async () => 'should not run')
-    ).rejects.toThrow(CircuitBreakerError)
+    await expect(breaker.execute('test-key', async () => 'should not run')).rejects.toThrow(
+      CircuitBreakerError
+    )
   })
 
   it('should transition to HALF_OPEN after recovery timeout', async () => {
@@ -50,7 +50,7 @@ describe('CircuitBreaker', () => {
     }
 
     // Wait for recovery timeout
-    await new Promise(resolve => setTimeout(resolve, 1100))
+    await new Promise((resolve) => setTimeout(resolve, 1100))
 
     // Should allow one test request
     const result = await breaker.execute('test-key', async () => 'recovered')
@@ -71,7 +71,7 @@ describe('CircuitBreaker', () => {
     }
 
     // Wait for recovery timeout
-    await new Promise(resolve => setTimeout(resolve, 1100))
+    await new Promise((resolve) => setTimeout(resolve, 1100))
 
     // HALF_OPEN request fails
     await expect(
@@ -81,9 +81,9 @@ describe('CircuitBreaker', () => {
     ).rejects.toThrow('still failing')
 
     // Circuit should be OPEN again
-    await expect(
-      breaker.execute('test-key', async () => 'should not run')
-    ).rejects.toThrow(CircuitBreakerError)
+    await expect(breaker.execute('test-key', async () => 'should not run')).rejects.toThrow(
+      CircuitBreakerError
+    )
   })
 
   it('should reset state when reset() is called', async () => {

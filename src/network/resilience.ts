@@ -5,7 +5,12 @@
 import { ResilienceOptions, Logger } from '../types.js'
 import { CircuitBreaker } from './circuit-breaker.js'
 import { withRetry } from './retry.js'
-import { executeRequest, createTimeoutController, FetchRequest, FetchResponse } from '../adapters/fetch-adapter.js'
+import {
+  executeRequest,
+  createTimeoutController,
+  FetchRequest,
+  FetchResponse,
+} from '../adapters/fetch-adapter.js'
 import { NetworkError } from '../errors.js'
 
 export class ResilientNetworkLayer {
@@ -29,10 +34,7 @@ export class ResilientNetworkLayer {
     const startTime = Date.now()
 
     // Create timeout controller for total operation
-    const totalController = createTimeoutController(
-      this.options.totalTimeoutMs,
-      parentSignal
-    )
+    const totalController = createTimeoutController(this.options.totalTimeoutMs, parentSignal)
 
     try {
       // Execute through circuit breaker
@@ -49,7 +51,7 @@ export class ResilientNetworkLayer {
             try {
               const response = await executeRequest(
                 { ...request, signal: attemptController.signal },
-                this.options.maxResponseBytes ?? 100_000,
+                this.options.maxResponseBytes ?? 100_000
               )
 
               // Log success
@@ -69,10 +71,9 @@ export class ResilientNetworkLayer {
                 }
 
                 // 5xx or other = server error, retryable
-                throw new NetworkError(
-                  `HTTP ${response.status}: ${response.statusText}`,
-                  { status: response.status }
-                )
+                throw new NetworkError(`HTTP ${response.status}: ${response.statusText}`, {
+                  status: response.status,
+                })
               }
 
               return response

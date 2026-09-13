@@ -7,10 +7,7 @@ import { RetryOptions, Logger } from '../types.js'
 /**
  * Calculate delay for next retry attempt
  */
-function calculateDelay(
-  attempt: number,
-  options: RetryOptions
-): number {
+function calculateDelay(attempt: number, options: RetryOptions): number {
   const { strategy, initialDelayMs, maxDelayMs, jitter } = options.backoff
 
   let delay: number

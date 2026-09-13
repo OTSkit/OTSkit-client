@@ -105,9 +105,9 @@ describe('CircuitBreaker - Advanced Scenarios', () => {
       expect(breaker.getState('fail-key')).toBe('OPEN')
 
       // Further requests should be rejected immediately
-      await expect(
-        breaker.execute('fail-key', async () => 'should not run')
-      ).rejects.toThrow(CircuitBreakerError)
+      await expect(breaker.execute('fail-key', async () => 'should not run')).rejects.toThrow(
+        CircuitBreakerError
+      )
     })
 
     it('should handle race condition during HALF_OPEN state', async () => {
@@ -297,9 +297,9 @@ describe('CircuitBreaker - Advanced Scenarios', () => {
       await new Promise((resolve) => setTimeout(resolve, 300))
 
       // Should still be OPEN
-      await expect(
-        breaker.execute('timing-key', async () => 'too soon')
-      ).rejects.toThrow(CircuitBreakerError)
+      await expect(breaker.execute('timing-key', async () => 'too soon')).rejects.toThrow(
+        CircuitBreakerError
+      )
     })
 
     it('should allow requests exactly at recovery timeout', async () => {
@@ -350,13 +350,13 @@ describe('CircuitBreaker - Advanced Scenarios', () => {
       }
 
       // Should throw CircuitBreakerError
-      await expect(
-        breaker.execute('cb-error-key', async () => 'blocked')
-      ).rejects.toThrow(CircuitBreakerError)
+      await expect(breaker.execute('cb-error-key', async () => 'blocked')).rejects.toThrow(
+        CircuitBreakerError
+      )
 
-      await expect(
-        breaker.execute('cb-error-key', async () => 'blocked')
-      ).rejects.toThrow('Circuit breaker open for calendar: cb-error-key')
+      await expect(breaker.execute('cb-error-key', async () => 'blocked')).rejects.toThrow(
+        'Circuit breaker open for calendar: cb-error-key'
+      )
     })
   })
 
@@ -401,10 +401,7 @@ describe('CircuitBreaker - Advanced Scenarios', () => {
       expect(tolerantBreaker.getState('tolerant-key')).toBe('CLOSED')
 
       // Should still allow requests
-      const result = await tolerantBreaker.execute(
-        'tolerant-key',
-        async () => 'still working'
-      )
+      const result = await tolerantBreaker.execute('tolerant-key', async () => 'still working')
       expect(result).toBe('still working')
     })
 
@@ -431,9 +428,7 @@ describe('CircuitBreaker - Advanced Scenarios', () => {
       // Should allow multiple test requests in HALF_OPEN
       const promises = []
       for (let i = 0; i < 3; i++) {
-        promises.push(
-          multiTestBreaker.execute('multi-test-key', async () => `success ${i}`)
-        )
+        promises.push(multiTestBreaker.execute('multi-test-key', async () => `success ${i}`))
       }
 
       const results = await Promise.all(promises)

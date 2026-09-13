@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../mocks/server.js'
-import { Timestamp, OpSHA256, StreamSerializationContext, bytesToHex, makePending } from '@otskit/core'
+import {
+  Timestamp,
+  OpSHA256,
+  StreamSerializationContext,
+  bytesToHex,
+  makePending,
+} from '@otskit/core'
 import { CalendarClient } from '../../src/network/calendar.js'
 import { CalendarResponseTooLargeError, CommitmentNotFoundError } from '../../src/errors.js'
 import { ResilientNetworkLayer } from '../../src/network/resilience.js'
@@ -22,7 +28,13 @@ const calendarResponseBytes = (msg: Uint8Array): Uint8Array => {
 }
 
 const newClient = () =>
-  new CalendarClient(CAL, new ResilientNetworkLayer({ ...DEFAULT_RESILIENCE, retries: { ...DEFAULT_RESILIENCE.retries, enabled: false } }))
+  new CalendarClient(
+    CAL,
+    new ResilientNetworkLayer({
+      ...DEFAULT_RESILIENCE,
+      retries: { ...DEFAULT_RESILIENCE.retries, enabled: false },
+    })
+  )
 
 describe('CalendarClient.submit', () => {
   it('POST /digest → deserializes the Timestamp committed to the digest', async () => {
@@ -31,10 +43,13 @@ describe('CalendarClient.submit', () => {
       http.post(`${CAL}/digest`, async ({ request }) => {
         const sent = new Uint8Array(await request.arrayBuffer())
         expect(Array.from(sent)).toEqual(Array.from(DIGEST)) // raw digest is sent
-        return HttpResponse.arrayBuffer(body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength), {
-          status: 200,
-          headers: { 'Content-Type': 'application/octet-stream' },
-        })
+        return HttpResponse.arrayBuffer(
+          body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/octet-stream' },
+          }
+        )
       })
     )
     const ts = await newClient().submit(DIGEST)
@@ -65,10 +80,13 @@ describe('CalendarClient.getTimestamp', () => {
     const body = calendarResponseBytes(DIGEST)
     server.use(
       http.get(`${CAL}/timestamp/${bytesToHex(DIGEST)}`, () =>
-        HttpResponse.arrayBuffer(body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength), {
-          status: 200,
-          headers: { 'Content-Type': 'application/octet-stream' },
-        })
+        HttpResponse.arrayBuffer(
+          body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/octet-stream' },
+          }
+        )
       )
     )
     const ts = await newClient().getTimestamp(DIGEST)
@@ -77,16 +95,24 @@ describe('CalendarClient.getTimestamp', () => {
 
   it('404 → CommitmentNotFoundError', async () => {
     server.use(
-      http.get(`${CAL}/timestamp/${bytesToHex(DIGEST)}`, () => new HttpResponse(null, { status: 404 }))
+      http.get(
+        `${CAL}/timestamp/${bytesToHex(DIGEST)}`,
+        () => new HttpResponse(null, { status: 404 })
+      )
     )
     await expect(newClient().getTimestamp(DIGEST)).rejects.toBeInstanceOf(CommitmentNotFoundError)
   })
 
   it('server error (500) propagates as NetworkError, not CommitmentNotFoundError', async () => {
     server.use(
-      http.get(`${CAL}/timestamp/${bytesToHex(DIGEST)}`, () => new HttpResponse(null, { status: 500 }))
+      http.get(
+        `${CAL}/timestamp/${bytesToHex(DIGEST)}`,
+        () => new HttpResponse(null, { status: 500 })
+      )
     )
-    const err = await newClient().getTimestamp(DIGEST).catch((e) => e)
+    const err = await newClient()
+      .getTimestamp(DIGEST)
+      .catch((e) => e)
     expect(err).not.toBeInstanceOf(CommitmentNotFoundError)
   })
 })

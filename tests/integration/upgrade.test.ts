@@ -15,13 +15,17 @@ import {
 
 const ALICE = 'https://alice.btc.calendar.opentimestamps.org'
 const BOB = 'https://bob.btc.calendar.opentimestamps.org'
-const arrayBufferOf = (b: Uint8Array) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer
+const arrayBufferOf = (b: Uint8Array) =>
+  b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer
 const completeFromCalendar = (url: string) =>
   http.get(`${url}/timestamp/:hex`, () =>
-    HttpResponse.arrayBuffer(arrayBufferOf(bitcoinResponseFor(INCOMPLETE_COMMITMENT, BITCOIN_HEIGHT)), {
-      status: 200,
-      headers: { 'Content-Type': 'application/octet-stream' },
-    })
+    HttpResponse.arrayBuffer(
+      arrayBufferOf(bitcoinResponseFor(INCOMPLETE_COMMITMENT, BITCOIN_HEIGHT)),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/octet-stream' },
+      }
+    )
   )
 
 const client = () => new OpenTimestampsClient({ calendars: [ALICE, BOB] })
@@ -49,9 +53,10 @@ describe('upgrade() - Integration', () => {
       http.get(`${BOB}/timestamp/:hex`, () => new HttpResponse(null, { status: 503 }))
     )
     await expect(
-      new OpenTimestampsClient({ calendars: [ALICE, BOB], resilience: { retries: { maxAttempts: 1 } } }).upgrade(
-        Buffer.from(FAKE_INCOMPLETE_OTS)
-      )
+      new OpenTimestampsClient({
+        calendars: [ALICE, BOB],
+        resilience: { retries: { maxAttempts: 1 } },
+      }).upgrade(Buffer.from(FAKE_INCOMPLETE_OTS))
     ).rejects.toThrow(UpgradeError)
   })
 
@@ -70,7 +75,9 @@ describe('upgrade() - Integration', () => {
   })
 
   it('throws ValidationError for an invalid .ots format', async () => {
-    await expect(client().upgrade(Buffer.from('invalid binary data'))).rejects.toThrow(ValidationError)
+    await expect(client().upgrade(Buffer.from('invalid binary data'))).rejects.toThrow(
+      ValidationError
+    )
   })
 
   it('ignores a pending attestation outside the allowlist (does not query it) → UpgradeError', async () => {
@@ -85,7 +92,9 @@ describe('upgrade() - Integration', () => {
         return new HttpResponse(null, { status: 200 })
       })
     )
-    await expect(client().upgrade(Buffer.from(dtf.serializeToBytes()))).rejects.toThrow(UpgradeError)
+    await expect(client().upgrade(Buffer.from(dtf.serializeToBytes()))).rejects.toThrow(
+      UpgradeError
+    )
     expect(queried).toBe(false) // the non-allowlisted calendar was never queried
   })
 

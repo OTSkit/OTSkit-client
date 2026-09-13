@@ -37,9 +37,9 @@ describe('assertSafeCalendarUrl', () => {
     })
 
     it('blocks [::1] (IPv6 loopback)', async () => {
-      await expect(
-        assertSafeCalendarUrl('http://[::1]/', { allowPrivate: false })
-      ).rejects.toThrow('Loopback')
+      await expect(assertSafeCalendarUrl('http://[::1]/', { allowPrivate: false })).rejects.toThrow(
+        'Loopback'
+      )
     })
   })
 
@@ -61,9 +61,9 @@ describe('assertSafeCalendarUrl', () => {
 
   describe('invalid URL', () => {
     it('rejects strings that cannot be parsed as a URL', async () => {
-      await expect(
-        assertSafeCalendarUrl('not-a-url', { allowPrivate: false })
-      ).rejects.toThrow(ValidationError)
+      await expect(assertSafeCalendarUrl('not-a-url', { allowPrivate: false })).rejects.toThrow(
+        ValidationError
+      )
     })
   })
 })

@@ -47,26 +47,26 @@ function assertNotPrivateIPv4(ip: string, calendarUrl: string): void {
   const n = ipv4ToUint32(ip)
   for (const cidr of BLOCKED_CIDRS_V4) {
     // >>> 0 normalizes to uint32 so comparisons work for networks >= 128.0.0.0
-    if (((n & cidr.mask) >>> 0) === cidr.network) {
+    if ((n & cidr.mask) >>> 0 === cidr.network) {
       throw new ValidationError(
         `Calendar URL "${calendarUrl}" resolves to a private/reserved IPv4 address ` +
-          `(${ip} — ${cidr.label}). Set allowPrivateCalendars: true to override.`,
+          `(${ip} — ${cidr.label}). Set allowPrivateCalendars: true to override.`
       )
     }
   }
 }
 
 const BLOCKED_IPV6_PREFIXES = [
-  { prefix: '::1',      label: 'Loopback' },
-  { prefix: '::',       label: 'Unspecified' },
-  { prefix: 'fc',       label: 'fc00::/7 (Unique Local)' },
-  { prefix: 'fd',       label: 'fd00::/8 (Unique Local)' },
-  { prefix: 'fe8',      label: 'fe80::/10 (Link-local)' },
-  { prefix: 'fe9',      label: 'fe80::/10 (Link-local)' },
-  { prefix: 'fea',      label: 'fe80::/10 (Link-local)' },
-  { prefix: 'feb',      label: 'fe80::/10 (Link-local)' },
-  { prefix: 'ff',       label: 'ff00::/8 (Multicast)' },
-  { prefix: '::ffff:',  label: 'IPv4-mapped IPv6' },
+  { prefix: '::1', label: 'Loopback' },
+  { prefix: '::', label: 'Unspecified' },
+  { prefix: 'fc', label: 'fc00::/7 (Unique Local)' },
+  { prefix: 'fd', label: 'fd00::/8 (Unique Local)' },
+  { prefix: 'fe8', label: 'fe80::/10 (Link-local)' },
+  { prefix: 'fe9', label: 'fe80::/10 (Link-local)' },
+  { prefix: 'fea', label: 'fe80::/10 (Link-local)' },
+  { prefix: 'feb', label: 'fe80::/10 (Link-local)' },
+  { prefix: 'ff', label: 'ff00::/8 (Multicast)' },
+  { prefix: '::ffff:', label: 'IPv4-mapped IPv6' },
   { prefix: '64:ff9b:', label: '64:ff9b::/96 (NAT64)' },
   { prefix: '2001:db8', label: '2001:db8::/32 (Documentation)' },
 ] as const
@@ -77,7 +77,7 @@ function assertNotPrivateIPv6(ip: string, calendarUrl: string): void {
     if (lower === prefix || lower.startsWith(prefix)) {
       throw new ValidationError(
         `Calendar URL "${calendarUrl}" resolves to a private/reserved IPv6 address ` +
-          `(${ip} — ${label}). Set allowPrivateCalendars: true to override.`,
+          `(${ip} — ${label}). Set allowPrivateCalendars: true to override.`
       )
     }
   }
@@ -92,7 +92,7 @@ function assertNotPrivateIPv6(ip: string, calendarUrl: string): void {
  */
 export async function assertSafeCalendarUrl(
   url: string,
-  options: { allowPrivate: boolean },
+  options: { allowPrivate: boolean }
 ): Promise<void> {
   let parsed: URL
   try {
@@ -113,13 +113,17 @@ export async function assertSafeCalendarUrl(
 
   const hostname = parsed.hostname
   // new URL() wraps IPv6 in brackets: "[::1]" — strip them for isIP/assertNot* calls
-  const host = hostname.startsWith('[') && hostname.endsWith(']')
-    ? hostname.slice(1, -1)
-    : hostname
+  const host = hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname
   const ipVersion = isIP(host)
 
-  if (ipVersion === 4) { assertNotPrivateIPv4(host, url); return }
-  if (ipVersion === 6) { assertNotPrivateIPv6(host, url); return }
+  if (ipVersion === 4) {
+    assertNotPrivateIPv4(host, url)
+    return
+  }
+  if (ipVersion === 6) {
+    assertNotPrivateIPv6(host, url)
+    return
+  }
 
   // Hostname — resolve DNS (subject to TOCTOU, see module JSDoc)
   let addresses: Array<{ address: string; family: number }>
@@ -128,7 +132,7 @@ export async function assertSafeCalendarUrl(
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     throw new ValidationError(
-      `Calendar URL hostname "${hostname}" could not be resolved: ${message}`,
+      `Calendar URL hostname "${hostname}" could not be resolved: ${message}`
     )
   }
 

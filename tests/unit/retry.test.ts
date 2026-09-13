@@ -42,7 +42,8 @@ describe('withRetry', () => {
       },
     }
 
-    const operation = vi.fn()
+    const operation = vi
+      .fn()
       .mockRejectedValueOnce(new Error('Attempt 1 failed'))
       .mockRejectedValueOnce(new Error('Attempt 2 failed'))
       .mockResolvedValue('success')
@@ -83,7 +84,8 @@ describe('withRetry', () => {
       },
     }
 
-    const operation = vi.fn()
+    const operation = vi
+      .fn()
       .mockRejectedValueOnce(new Error('fail'))
       .mockRejectedValueOnce(new Error('fail'))
       .mockRejectedValueOnce(new Error('fail'))
@@ -110,7 +112,8 @@ describe('withRetry', () => {
       },
     }
 
-    const operation = vi.fn()
+    const operation = vi
+      .fn()
       .mockRejectedValueOnce(new Error('fail'))
       .mockRejectedValueOnce(new Error('fail'))
       .mockRejectedValueOnce(new Error('fail'))

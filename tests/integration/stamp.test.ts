@@ -7,7 +7,8 @@ import { OpenTimestampsClient } from '../../src/client.js'
 import { StampError, ValidationError } from '../../src/errors.js'
 
 const TEST_HASH = '1f02d20a78657fab24c5028383f23a45e11a8a25c102a86c6e768855b5059e3a'
-const clientWith = (calendars: string[], extra = {}) => new OpenTimestampsClient({ calendars, ...extra })
+const clientWith = (calendars: string[], extra = {}) =>
+  new OpenTimestampsClient({ calendars, ...extra })
 
 describe('stamp() - Integration', () => {
   it('stamps with 2 OK calendars and returns a canonical .ots with pending attestations', async () => {
@@ -30,8 +31,14 @@ describe('stamp() - Integration', () => {
 
   it('partial success (2/4 calendars OK) meets the default threshold', async () => {
     server.use(
-      http.post('https://finney.calendar.eternitywall.com/digest', () => new HttpResponse(null, { status: 503 })),
-      http.post('https://btc.calendar.catallaxy.com/digest', () => new HttpResponse(null, { status: 503 }))
+      http.post(
+        'https://finney.calendar.eternitywall.com/digest',
+        () => new HttpResponse(null, { status: 503 })
+      ),
+      http.post(
+        'https://btc.calendar.catallaxy.com/digest',
+        () => new HttpResponse(null, { status: 503 })
+      )
     )
     const proof = await clientWith([
       'https://alice.btc.calendar.opentimestamps.org',
@@ -44,9 +51,18 @@ describe('stamp() - Integration', () => {
 
   it('throws StampError when the minimum threshold is not reached', async () => {
     server.use(
-      http.post('https://alice.btc.calendar.opentimestamps.org/digest', () => new HttpResponse(null, { status: 503 })),
-      http.post('https://bob.btc.calendar.opentimestamps.org/digest', () => new HttpResponse(null, { status: 503 })),
-      http.post('https://finney.calendar.eternitywall.com/digest', () => new HttpResponse(null, { status: 503 }))
+      http.post(
+        'https://alice.btc.calendar.opentimestamps.org/digest',
+        () => new HttpResponse(null, { status: 503 })
+      ),
+      http.post(
+        'https://bob.btc.calendar.opentimestamps.org/digest',
+        () => new HttpResponse(null, { status: 503 })
+      ),
+      http.post(
+        'https://finney.calendar.eternitywall.com/digest',
+        () => new HttpResponse(null, { status: 503 })
+      )
     )
     await expect(
       clientWith([
@@ -60,19 +76,26 @@ describe('stamp() - Integration', () => {
 
   it('throws ValidationError for a hash with invalid length', async () => {
     await expect(
-      clientWith(['https://alice.btc.calendar.opentimestamps.org'], { minimumSuccessfulSubmissions: 1 }).stamp('abcd1234')
+      clientWith(['https://alice.btc.calendar.opentimestamps.org'], {
+        minimumSuccessfulSubmissions: 1,
+      }).stamp('abcd1234')
     ).rejects.toThrow(ValidationError)
   })
 
   it('throws ValidationError for non-hex characters', async () => {
     await expect(
-      clientWith(['https://alice.btc.calendar.opentimestamps.org'], { minimumSuccessfulSubmissions: 1 }).stamp('z'.repeat(64))
+      clientWith(['https://alice.btc.calendar.opentimestamps.org'], {
+        minimumSuccessfulSubmissions: 1,
+      }).stamp('z'.repeat(64))
     ).rejects.toThrow(ValidationError)
   })
 
   it('minimumSuccessfulSubmissions=3 with 3/4 OK succeeds', async () => {
     server.use(
-      http.post('https://btc.calendar.catallaxy.com/digest', () => new HttpResponse(null, { status: 503 }))
+      http.post(
+        'https://btc.calendar.catallaxy.com/digest',
+        () => new HttpResponse(null, { status: 503 })
+      )
     )
     const proof = await clientWith(
       [
@@ -88,7 +111,9 @@ describe('stamp() - Integration', () => {
 
   it('throws ValidationError when minimumSuccessfulSubmissions < 1', () => {
     expect(() =>
-      clientWith(['https://alice.btc.calendar.opentimestamps.org'], { minimumSuccessfulSubmissions: 0 })
+      clientWith(['https://alice.btc.calendar.opentimestamps.org'], {
+        minimumSuccessfulSubmissions: 0,
+      })
     ).toThrow(ValidationError)
   })
 
@@ -100,7 +125,9 @@ describe('stamp() - Integration', () => {
 
   it('throws ValidationError when minimumSuccessfulSubmissions exceeds the number of calendars', () => {
     expect(() =>
-      clientWith(['https://alice.btc.calendar.opentimestamps.org'], { minimumSuccessfulSubmissions: 5 })
+      clientWith(['https://alice.btc.calendar.opentimestamps.org'], {
+        minimumSuccessfulSubmissions: 5,
+      })
     ).toThrow(ValidationError)
   })
 })

@@ -36,7 +36,7 @@ describe('OpenTimestampsClient', () => {
 
   it('should accept valid hash formats', async () => {
     const client = new OpenTimestampsClient({ calendars: DEFAULT_CALENDARS })
-    
+
     const validHash = 'a'.repeat(64)
     const validBuffer = Buffer.from(validHash, 'hex')
 

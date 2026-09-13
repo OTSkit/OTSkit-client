@@ -28,10 +28,7 @@ export class CircuitBreaker {
   /**
    * Execute a request through the circuit breaker
    */
-  async execute<T>(
-    key: string,
-    fn: () => Promise<T>
-  ): Promise<T> {
+  async execute<T>(key: string, fn: () => Promise<T>): Promise<T> {
     if (!this.options.enabled) {
       return fn()
     }
@@ -41,7 +38,7 @@ export class CircuitBreaker {
     // Check if circuit is open
     if (circuit.state === CircuitState.OPEN) {
       const shouldAttemptRecovery = this.shouldAttemptRecovery(circuit)
-      
+
       if (shouldAttemptRecovery) {
         this.logger?.info(`Circuit breaker for ${key} entering HALF_OPEN state`)
         circuit.state = CircuitState.HALF_OPEN
@@ -97,7 +94,7 @@ export class CircuitBreaker {
   private shouldAttemptRecovery(circuit: { state: CircuitState; stats: CircuitStats }): boolean {
     /* v8 ignore next */
     if (!circuit.stats.lastFailureTime) return false
-    
+
     const elapsed = Date.now() - circuit.stats.lastFailureTime
     return elapsed >= this.options.recoveryTimeoutMs
   }
@@ -107,7 +104,7 @@ export class CircuitBreaker {
       this.logger?.info(`Circuit breaker for ${key} closing after successful HALF_OPEN attempt`)
       circuit.state = CircuitState.CLOSED
     }
-    
+
     circuit.stats.consecutiveFailures = 0
     circuit.stats.halfOpenAttempts = 0
   }

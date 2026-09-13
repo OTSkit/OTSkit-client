@@ -52,16 +52,16 @@ export interface ResilienceOptions {
 export interface ClientOptions {
   /** List of OpenTimestamps calendar URLs */
   calendars?: string[]
-  
+
   /** Network resilience configuration */
   resilience?: Partial<ResilienceOptions>
-  
+
   /** Optional logger for observability */
   logger?: Logger
-  
+
   /** Optional AbortSignal to cancel all operations */
   signal?: AbortSignal
-  
+
   /** Minimum successful calendar submissions required (default: 2) */
   minimumSuccessfulSubmissions?: number
 
