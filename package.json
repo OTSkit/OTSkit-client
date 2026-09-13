@@ -40,7 +40,7 @@
     "coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "format": "prettier --write src tests",
     "semantic-release": "semantic-release"
   },
   "keywords": [
