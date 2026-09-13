@@ -61,7 +61,7 @@ export {
 export type { EsploraClientOptions } from './network/esplora.js'
 export { EsploraResponseError } from './errors.js'
 
-// Re-export de tipos del core canónico útiles para usuarios avanzados
+// Re-exported core types, for callers that need to work with proofs directly
 export type { Attestation, BitcoinAttestation, PendingAttestation } from '@otskit/core'
 export { DetachedTimestampFile, Timestamp } from '@otskit/core'
 

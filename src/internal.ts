@@ -2,13 +2,13 @@ import type { ClientOptions } from './types.js'
 import type { ResilientNetworkLayer } from './network/resilience.js'
 
 /**
- * Opciones internas del constructor — no expuestas en la API pública (no se exporta desde index.ts).
- * Solo para testing e inyección de fixtures de red.
+ * Internal constructor options, kept out of the public API: this file is not exported
+ * from index.ts. For tests and for injecting network fixtures.
  * @internal
  */
 export interface InternalClientOptions extends ClientOptions {
   /**
-   * Inyecta una capa de red personalizada, omitiendo la construcción de ResilientNetworkLayer.
+   * Injects a custom network layer, skipping the ResilientNetworkLayer construction.
    * @internal
    */
   _networkLayer?: ResilientNetworkLayer
