@@ -1,3 +1,10 @@
+## [0.7.2](https://github.com/OTSkit/OTSkit-client/compare/v0.7.1...v0.7.2) (2026-09-13)
+
+
+### Bug Fixes
+
+* preserve distinct attestations and tolerate calendar DNS failures ([f1e0194](https://github.com/OTSkit/OTSkit-client/commit/f1e019451844673d98ac1c9e82d2dfcf0c9f00f1))
+
 ## [0.7.1](https://github.com/OTSkit/OTSkit-client/compare/v0.7.0...v0.7.1) (2026-07-30)
 
 
