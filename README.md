@@ -78,11 +78,11 @@ writeFileSync('contract.pdf.ots', upgradedProof)
 
 // 4. Verify the completed proof
 const result = await client.verify(upgradedProof, hash)
-if (result.valid) {
+if (result.status === 'verified') {
   console.log(`Timestamp confirmed in Bitcoin block ${result.blockHeight}`)
-  console.log(`Block time: ${new Date(result.timestamp! * 1000).toISOString()}`)
+  console.log(`Block time: ${new Date(result.blockTime * 1000).toISOString()}`)
 } else {
-  console.error(`Verification failed: ${result.error}`)
+  console.error(`Not confirmed (${result.status}): ${result.reason}`)
 }
 ```
 
@@ -146,16 +146,24 @@ try {
 ```typescript
 const result = await client.verify(proof, originalHash)
 
-if (result.valid) {
-  console.log(result.blockHeight)  // Bitcoin block number
-  console.log(result.blockHash)    // Block hash (hex)
-  console.log(result.timestamp)    // Unix timestamp of the block
-} else {
-  console.log(result.error)        // Human-readable reason
+switch (result.status) {
+  case 'verified':
+    console.log(result.blockHeight)  // Bitcoin block number
+    console.log(result.blockTime)    // Unix timestamp of the block
+    break
+  case 'pending':
+    console.log(result.reason)       // No Bitcoin attestation yet — upgrade() again later
+    break
+  case 'invalid':
+    console.log(result.reason)       // The chain contradicts the proof
+    break
+  case 'network_error':
+    console.log(result.reason)       // Explorer unreachable; the proof remains unknown
+    break
 }
 ```
 
-`verify()` always returns `VerificationResult` — it never throws for invalid proofs, only for unexpected network failures.
+`verify()` always returns `VerificationResult` — it never throws for invalid proofs, only for unexpected network failures. The four states are distinct on purpose: only `verified` means Bitcoin backs the proof, and `network_error` says nothing either way. For a plain check, the exported `isVerified(result)` type guard narrows to the success variant.
 
 ### Error handling
 

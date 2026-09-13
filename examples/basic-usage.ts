@@ -35,14 +35,21 @@ async function main() {
   console.log('\n✓ Verifying timestamp...')
   const result = await client.verify(upgraded, hash)
 
-  if (result.valid) {
-    console.log('✅ Timestamp is VALID')
-    if (result.blockHeight) {
+  switch (result.status) {
+    case 'verified':
+      console.log('✅ Timestamp is backed by Bitcoin')
       console.log(`   Block: ${result.blockHeight}`)
-      console.log(`   Time:  ${result.timestamp}`)
-    }
-  } else {
-    console.log(`❌ Verification failed: ${result.error}`)
+      console.log(`   Time:  ${new Date(result.blockTime * 1000).toISOString()}`)
+      break
+    case 'pending':
+      console.log(`⏳ Not in a block yet: ${result.reason}`)
+      break
+    case 'invalid':
+      console.log(`❌ The chain contradicts this proof: ${result.reason}`)
+      break
+    case 'network_error':
+      console.log(`⚠️  Could not reach the explorer, status unknown: ${result.reason}`)
+      break
   }
 }
 

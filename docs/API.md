@@ -117,9 +117,11 @@ async verify(
 **Example:**
 ```typescript
 const result = await client.verify(proof, hash)
-if (result.valid) {
+if (result.status === 'verified') {
   console.log(`Confirmed at block ${result.blockHeight}`)
-  console.log(`Timestamp: ${result.timestamp}`)
+  console.log(`Block time: ${result.blockTime}`)
+} else {
+  console.log(`Not confirmed (${result.status}): ${result.reason}`)
 }
 ```
 
