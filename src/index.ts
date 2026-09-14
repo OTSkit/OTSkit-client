@@ -1,7 +1,7 @@
 /**
  * @otskit/client
  *
- * Official OpenTimestamps client SDK with resilience patterns
+ * Client SDK for OpenTimestamps with resilience patterns
  *
  * @module
  */

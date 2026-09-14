@@ -16,7 +16,9 @@
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=OTSkit_OTSkit-client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=OTSkit_OTSkit-client)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-`@otskit/client` is the official client SDK for submitting, upgrading, and verifying [OpenTimestamps](https://opentimestamps.org) proofs. It sits on top of [@otskit/core](https://github.com/OTSkit/OTSkit-core) — the low-level protocol engine — and wraps it in a high-level API with production-ready resilience patterns built in.
+`@otskit/client` is a client SDK for submitting, upgrading, and verifying [OpenTimestamps](https://opentimestamps.org) proofs. It sits on top of [@otskit/core](https://github.com/OTSkit/OTSkit-core) — the low-level protocol engine — and wraps it in a high-level API with production-ready resilience patterns built in.
+
+> This is an independent implementation of the OpenTimestamps protocol. It is not affiliated with, endorsed by, or maintained by the OpenTimestamps project.
 
 ## Features
 
