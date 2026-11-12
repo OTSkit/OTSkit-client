@@ -95,6 +95,12 @@ jobs:
           test -f dist/index.js
           test -f dist/index.cjs
           test -f dist/index.d.ts
+      - name: Use minimum supported runtime
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20.0.0'
+      - name: Verify built ESM and CommonJS on Node.js 20
+        run: node scripts/runtime-smoke.mjs
 
   release:
     name: Release
