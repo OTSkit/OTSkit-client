@@ -36,6 +36,10 @@ Be respectful, inclusive, and professional in all interactions.
 
 ## Development Setup
 
+Use Node.js 24.11+ (24.x LTS recommended) to install development dependencies and build the SDK. The tsup 9 toolchain supports Node.js `^22.18.0 || ^24.11.0 || >=26.0.0`.
+
+The published SDK continues to support Node.js 20+. Builds explicitly target Node.js 20, and CI checks both the ESM and CommonJS outputs on Node.js 20 without running the development toolchain there.
+
 ```bash
 # Clone repository
 git clone https://github.com/alexalves87/opentimestamps-client.git
